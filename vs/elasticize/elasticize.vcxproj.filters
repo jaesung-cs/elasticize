@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) 2015-2019 LunarG, Inc. -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{6afff39b-359f-455b-bd49-8cf1cb5419f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{194aea3e-f4ca-4662-8ee7-6ff259f113ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\elasticize">
+      <UniqueIdentifier>{f056fae4-3dda-426b-8467-d08ebffb190e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\elasticize">
+      <UniqueIdentifier>{ff3591a9-62b6-4e8e-aacf-a6ea0bf2f52e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\elasticize.cpp">
+      <Filter>src\elasticize</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\elasticize\elasticize.h">
+      <Filter>include\elasticize</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
