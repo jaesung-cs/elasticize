@@ -22,11 +22,26 @@ int main()
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint32_t> distribution(0, (1 << keyBits) - 1);
 
-    elastic::gpu::Buffer<uint32_t> buffer(engine, n);
+    std::vector<uint32_t> buffer(n);
     for (int i = 0; i < n; i++)
       buffer[i] = distribution(gen);
 
-    buffer.toGpu();
+    elastic::gpu::Buffer<uint32_t> gpuBuffer(engine, n);
+    for (int i = 0; i < n; i++)
+      gpuBuffer[i] = buffer[i];
+
+    gpuBuffer.toGpu();
+
+    for (int i = 0; i < n; i++)
+      gpuBuffer[i] = 0;
+
+    gpuBuffer.fromGpu();
+
+    for (int i = 0; i < n; i++)
+    {
+      if (buffer[i] != gpuBuffer[i])
+        std::cout << "At " << i << ": " << gpuBuffer[i] << " (expected: " << buffer[i] << ")" << std::endl;
+    }
   }
   catch (const std::exception& e)
   {

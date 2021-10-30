@@ -49,6 +49,14 @@ private:
 
   void transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buffer);
 
+  template <typename T>
+  void transferFromGpu(std::vector<T>& data, vk::Buffer buffer)
+  {
+    transferFromGpu(data.data(), sizeof(T) * data.size(), buffer);
+  }
+
+  void transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer);
+
 private:
   void createInstance();
   void destroyInstance();

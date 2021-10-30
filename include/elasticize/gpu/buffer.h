@@ -19,6 +19,7 @@ public:
   const auto& operator [] (uint64_t index) const { return data_[index]; }
 
   void toGpu();
+  void fromGpu();
 
 private:
   Engine& engine_;

@@ -101,7 +101,41 @@ void Engine::transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buf
 
   // TODO: don't wait for transfer completion
   device_.waitForFences(transferFence_, true, UINT64_MAX);
+  device_.resetFences(transferFence_);
   device_.freeCommandBuffers(transientCommandPool_, cb);
+}
+
+void Engine::transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer)
+{
+  // To target buffer
+  const auto region = vk::BufferCopy()
+    .setSrcOffset(0)
+    .setDstOffset(0)
+    .setSize(size);
+
+  const auto allocateInfo = vk::CommandBufferAllocateInfo()
+    .setLevel(vk::CommandBufferLevel::ePrimary)
+    .setCommandPool(transientCommandPool_)
+    .setCommandBufferCount(1);
+
+  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
+
+  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+  cb.copyBuffer(buffer, stagingBuffer_, region);
+  cb.end();
+
+  const auto submit = vk::SubmitInfo()
+    .setCommandBuffers(cb);
+
+  queue_.submit(submit, transferFence_);
+
+  // TODO: don't wait for transfer completion
+  device_.waitForFences(transferFence_, true, UINT64_MAX);
+  device_.resetFences(transferFence_);
+  device_.freeCommandBuffers(transientCommandPool_, cb);
+
+  // To staging buffer
+  std::memcpy(data, stagingBufferMap_, size);
 }
 
 void Engine::attachWindow(const window::Window& window)
