@@ -31,9 +31,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\main.cc">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\elasticize\window\window.cc">
       <Filter>src\elasticize\window</Filter>
     </ClCompile>

@@ -22,19 +22,34 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{62E6
 		..\scripts\compile_shader.py = ..\scripts\compile_shader.py
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bench_radix_sort", "bench_radix_sort\bench_radix_sort.vcxproj", "{37427CEC-1063-4AAC-B316-F79D071EA6D9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93} = {5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "app", "app\app.vcxproj", "{D5E8BB20-64AB-4348-A621-0D3B4A37C217}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93} = {5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Release|x64 = Release|x64
-		RelWithValidation|x64 = RelWithValidation|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}.Debug|x64.ActiveCfg = Debug|x64
 		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}.Debug|x64.Build.0 = Debug|x64
 		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}.Release|x64.ActiveCfg = Release|x64
 		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}.Release|x64.Build.0 = Release|x64
-		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}.RelWithValidation|x64.ActiveCfg = RelWithValidation|x64
-		{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}.RelWithValidation|x64.Build.0 = RelWithValidation|x64
+		{37427CEC-1063-4AAC-B316-F79D071EA6D9}.Debug|x64.ActiveCfg = Debug|x64
+		{37427CEC-1063-4AAC-B316-F79D071EA6D9}.Debug|x64.Build.0 = Debug|x64
+		{37427CEC-1063-4AAC-B316-F79D071EA6D9}.Release|x64.ActiveCfg = Release|x64
+		{37427CEC-1063-4AAC-B316-F79D071EA6D9}.Release|x64.Build.0 = Release|x64
+		{D5E8BB20-64AB-4348-A621-0D3B4A37C217}.Debug|x64.ActiveCfg = Debug|x64
+		{D5E8BB20-64AB-4348-A621-0D3B4A37C217}.Debug|x64.Build.0 = Debug|x64
+		{D5E8BB20-64AB-4348-A621-0D3B4A37C217}.Release|x64.ActiveCfg = Release|x64
+		{D5E8BB20-64AB-4348-A621-0D3B4A37C217}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

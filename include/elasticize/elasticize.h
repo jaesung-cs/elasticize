@@ -1,8 +1,4 @@
 #ifndef ELASTICIZE_ELASTICIZE_H_
 #define ELASTICIZE_ELASTICIZE_H_
 
-namespace elastic
-{
-}
-
 #endif // ELASTICIZE_ELASTICIZE_H_

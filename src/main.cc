@@ -1,5 +1,3 @@
-#include <vulkan/vulkan.hpp>
-
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -16,12 +14,19 @@ int main()
     elastic::window::WindowManager windowManager;
     elastic::window::Window window(1600, 900, "Elasticize");
 
-    elastic::gpu::Engine engine;
+    elastic::gpu::Engine::Options options;
+    options.headless = false;
+    options.validationLayer = true;
+
+    elastic::gpu::Engine engine(options);
     engine.attachWindow(window);
 
     while (!window.shouldClose())
     {
       windowManager.pollEvents();
+
+      using namespace std::chrono_literals;
+      std::this_thread::sleep_for(0.01s);
     }
   }
   catch (const std::exception& e)

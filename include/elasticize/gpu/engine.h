@@ -15,7 +15,15 @@ namespace gpu
 class Engine
 {
 public:
-  Engine();
+  struct Options
+  {
+    bool validationLayer = false;
+    bool headless = true;
+  };
+
+public:
+  Engine() = delete;
+  explicit Engine(Options options);
   ~Engine();
 
   void attachWindow(const window::Window& window);
@@ -32,7 +40,7 @@ private:
   void destroySwapchain();
 
 private:
-  bool validationLayer_ = false;
+  Options options_;
   vk::Instance instance_;
   vk::DebugUtilsMessengerEXT messenger_;
 

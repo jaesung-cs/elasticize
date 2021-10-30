@@ -25,7 +25,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 }
 }
 
-Engine::Engine()
+Engine::Engine(Options options)
+  : options_(options)
 {
   createInstance();
   createDevice();
@@ -131,23 +132,20 @@ void Engine::destroySwapchain()
 
 void Engine::createInstance()
 {
-#if defined(VULKAN_VALIDATION)
-  validationLayer_ = true;
-#else
-  validationLayer_ = false;
-#endif
-
   std::vector<const char*> layers;
   std::vector<const char*> instanceExtensions;
-  if (validationLayer_)
+  if (options_.validationLayer)
   {
     layers.push_back("VK_LAYER_KHRONOS_validation");
     instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
-  const auto windowInstanceExtensions = window::WindowManager::requiredInstanceExtensions();
-  for (const char* windowInstanceExtension : windowInstanceExtensions)
-    instanceExtensions.push_back(windowInstanceExtension);
+  if (!options_.headless)
+  {
+    const auto windowInstanceExtensions = window::WindowManager::requiredInstanceExtensions();
+    for (const char* windowInstanceExtension : windowInstanceExtensions)
+      instanceExtensions.push_back(windowInstanceExtension);
+  }
 
   const auto appInfo = vk::ApplicationInfo()
     .setPApplicationName("Elasticize")
@@ -162,7 +160,7 @@ void Engine::createInstance()
     .setPEnabledExtensionNames(instanceExtensions)
     .setPEnabledLayerNames(layers);
 
-  if (validationLayer_)
+  if (options_.validationLayer)
   {
     const auto messengerInfo = vk::DebugUtilsMessengerCreateInfoEXT()
       .setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose)
@@ -210,7 +208,9 @@ void Engine::createDevice()
   selectSuitablePhysicalDevice();
 
   std::vector<const char*> deviceExtensions;
-  deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+  if (!options_.headless)
+    deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
   const auto queueFamilyProperties = physicalDevice_.getQueueFamilyProperties();
   queueIndex_ = 0;
