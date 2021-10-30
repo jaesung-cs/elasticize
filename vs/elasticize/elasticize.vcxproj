@@ -17,12 +17,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\elasticize\elasticize.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\engine.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window_manager.cc" />
     <ClCompile Include="..\..\src\main.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\elasticize\elasticize.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\engine.h" />
     <ClInclude Include="..\..\include\elasticize\window\window.h" />
     <ClInclude Include="..\..\include\elasticize\window\window_manager.h" />
   </ItemGroup>

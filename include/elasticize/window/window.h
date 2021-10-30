@@ -5,6 +5,8 @@
 
 #include <glm/glm.hpp>
 
+#include <vulkan/vulkan.hpp>
+
 struct GLFWwindow;
 
 namespace elastic
@@ -18,6 +20,10 @@ public:
   ~Window();
 
   bool shouldClose() const;
+  auto width() const { return size_[0]; }
+  auto height() const { return size_[1]; }
+
+  vk::SurfaceKHR createVulkanSurface(vk::Instance instance) const;
 
 private:
   glm::uvec2 pos_{ 100, 100 };

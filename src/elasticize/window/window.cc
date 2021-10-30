@@ -1,5 +1,6 @@
 #include <elasticize/window/window.h>
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 namespace elastic
@@ -24,6 +25,13 @@ Window::~Window()
 bool Window::shouldClose() const
 {
   return glfwWindowShouldClose(window_);
+}
+
+vk::SurfaceKHR Window::createVulkanSurface(vk::Instance instance) const
+{
+  VkSurfaceKHR surface;
+  glfwCreateWindowSurface(instance, window_, nullptr, &surface);
+  return surface;
 }
 }
 }

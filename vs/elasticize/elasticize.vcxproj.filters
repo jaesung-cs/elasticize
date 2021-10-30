@@ -40,6 +40,9 @@
     <ClCompile Include="..\..\src\elasticize\window\window_manager.cc">
       <Filter>src\elasticize\window</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\engine.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\elasticize\elasticize.h">
@@ -50,6 +53,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\elasticize\window\window_manager.h">
       <Filter>include\elasticize\window</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\engine.h">
+      <Filter>include\elasticize\gpu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
