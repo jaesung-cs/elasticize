@@ -12,8 +12,14 @@ class Window;
 
 namespace gpu
 {
+template <typename T>
+class Buffer;
+
 class Engine
 {
+  template <typename T>
+  friend class Buffer;
+
 public:
   struct Options
   {
@@ -27,6 +33,11 @@ public:
   ~Engine();
 
   void attachWindow(const window::Window& window);
+
+private:
+  // By friend objects
+  vk::Buffer createBuffer(uint64_t size);
+  void destroyBuffer(vk::Buffer buffer);
 
 private:
   void createInstance();

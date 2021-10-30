@@ -18,11 +18,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\elasticize\elasticize.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\buffer.h" />
     <ClInclude Include="..\..\include\elasticize\gpu\engine.h" />
     <ClInclude Include="..\..\include\elasticize\window\window.h" />
     <ClInclude Include="..\..\include\elasticize\window\window_manager.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\include\elasticize\gpu\buffer.inl" />
     <None Include="..\..\src\elasticize\shader\radix_sort.comp" />
   </ItemGroup>
   <!-- Added to disable build up-to-date check -->

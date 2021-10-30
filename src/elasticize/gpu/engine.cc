@@ -4,6 +4,7 @@
 
 #include <elasticize/window/window_manager.h>
 #include <elasticize/window/window.h>
+#include <elasticize/gpu/buffer.h>
 
 namespace elastic
 {
@@ -39,6 +40,22 @@ Engine::~Engine()
   destroySwapchain();
   destroyDevice();
   destroyInstance();
+}
+
+vk::Buffer Engine::createBuffer(vk::DeviceSize size)
+{
+  const auto bufferInfo = vk::BufferCreateInfo()
+    .setUsage(vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst)
+    .setSize(size);
+
+  auto buffer = device_.createBuffer(bufferInfo);
+
+  return buffer;
+}
+
+void Engine::destroyBuffer(vk::Buffer buffer)
+{
+  device_.destroyBuffer(buffer);
 }
 
 void Engine::attachWindow(const window::Window& window)
