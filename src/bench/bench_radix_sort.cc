@@ -25,6 +25,8 @@ int main()
     elastic::gpu::Buffer<uint32_t> buffer(engine, n);
     for (int i = 0; i < n; i++)
       buffer[i] = distribution(gen);
+
+    buffer.toGpu();
   }
   catch (const std::exception& e)
   {

@@ -20,6 +20,12 @@ Buffer<T>::~Buffer()
 {
   engine_.destroyBuffer(buffer_);
 }
+
+template <typename T>
+void Buffer<T>::toGpu()
+{
+  engine_.transferToGpu(data_, buffer_);
+}
 }
 }
 

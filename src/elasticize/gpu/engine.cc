@@ -24,6 +24,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
   return VK_FALSE;
 }
+
+vk::DeviceSize align(vk::DeviceSize offset, vk::DeviceSize alignment)
+{
+  return (offset + alignment - 1) & ~(alignment - 1);
+}
 }
 
 Engine::Engine(Options options)
@@ -31,12 +36,16 @@ Engine::Engine(Options options)
 {
   createInstance();
   createDevice();
+  createMemoryPool();
+  createCommandPool();
 }
 
 Engine::~Engine()
 {
   device_.waitIdle();
 
+  destroyCommandPool();
+  destroyMemoryPool();
   destroySwapchain();
   destroyDevice();
   destroyInstance();
@@ -50,12 +59,49 @@ vk::Buffer Engine::createBuffer(vk::DeviceSize size)
 
   auto buffer = device_.createBuffer(bufferInfo);
 
+  const auto memoryRequirements = device_.getBufferMemoryRequirements(buffer);
+  deviceMemoryOffset_ = align(deviceMemoryOffset_, memoryRequirements.alignment);
+  device_.bindBufferMemory(buffer, deviceMemory_, deviceMemoryOffset_);
+  deviceMemoryOffset_ += size;
+
   return buffer;
 }
 
 void Engine::destroyBuffer(vk::Buffer buffer)
 {
   device_.destroyBuffer(buffer);
+}
+
+void Engine::transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buffer)
+{
+  // To staging buffer
+  std::memcpy(stagingBufferMap_, data, size);
+
+  // To target buffer
+  const auto region = vk::BufferCopy()
+    .setSrcOffset(0)
+    .setDstOffset(0)
+    .setSize(size);
+
+  const auto allocateInfo = vk::CommandBufferAllocateInfo()
+    .setLevel(vk::CommandBufferLevel::ePrimary)
+    .setCommandPool(transientCommandPool_)
+    .setCommandBufferCount(1);
+
+  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
+
+  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+  cb.copyBuffer(stagingBuffer_, buffer, region);
+  cb.end();
+
+  const auto submit = vk::SubmitInfo()
+    .setCommandBuffers(cb);
+
+  queue_.submit(submit, transferFence_);
+
+  // TODO: don't wait for transfer completion
+  device_.waitForFences(transferFence_, true, UINT64_MAX);
+  device_.freeCommandBuffers(transientCommandPool_, cb);
 }
 
 void Engine::attachWindow(const window::Window& window)
@@ -147,6 +193,87 @@ void Engine::destroySwapchain()
     instance_.destroySurfaceKHR(surface_);
 }
 
+void Engine::createMemoryPool()
+{
+  const auto memoryProperties = physicalDevice_.getMemoryProperties();
+
+  // Find memroy type index
+  uint64_t deviceAvailableSize = 0;
+  uint64_t hostAvailableSize = 0;
+  for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
+  {
+    const auto properties = memoryProperties.memoryTypes[i].propertyFlags;
+    const auto heapIndex = memoryProperties.memoryTypes[i].heapIndex;
+    const auto heap = memoryProperties.memoryHeaps[heapIndex];
+
+    if ((properties & vk::MemoryPropertyFlagBits::eDeviceLocal) == vk::MemoryPropertyFlagBits::eDeviceLocal)
+    {
+      if (heap.size > deviceAvailableSize)
+      {
+        deviceIndex_ = i;
+        deviceAvailableSize = heap.size;
+      }
+    }
+
+    if ((properties & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
+      == (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
+    {
+      if (heap.size > hostAvailableSize)
+      {
+        hostIndex_ = i;
+        hostAvailableSize = heap.size;
+      }
+    }
+  }
+
+  {
+    const auto allocateInfo = vk::MemoryAllocateInfo()
+      .setMemoryTypeIndex(deviceIndex_)
+      .setAllocationSize(options_.memoryPoolSize);
+    deviceMemory_ = device_.allocateMemory(allocateInfo);
+  }
+  {
+    const auto allocateInfo = vk::MemoryAllocateInfo()
+      .setMemoryTypeIndex(hostIndex_)
+      .setAllocationSize(options_.memoryPoolSize);
+    hostMemory_ = device_.allocateMemory(allocateInfo);
+
+    const auto bufferInfo = vk::BufferCreateInfo()
+      .setUsage(vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst)
+      .setSize(allocateInfo.allocationSize);
+    stagingBuffer_ = device_.createBuffer(bufferInfo);
+
+    device_.bindBufferMemory(stagingBuffer_, hostMemory_, 0);
+
+    stagingBufferMap_ = reinterpret_cast<uint8_t*>(device_.mapMemory(hostMemory_, 0, allocateInfo.allocationSize));
+  }
+}
+
+void Engine::destroyMemoryPool()
+{
+  device_.unmapMemory(hostMemory_);
+  stagingBufferMap_ = nullptr;
+  device_.destroyBuffer(stagingBuffer_);
+  device_.freeMemory(deviceMemory_);
+  device_.freeMemory(hostMemory_);
+}
+
+void Engine::createCommandPool()
+{
+  const auto commandPoolInfo = vk::CommandPoolCreateInfo()
+    .setQueueFamilyIndex(queueIndex_)
+    .setFlags(vk::CommandPoolCreateFlagBits::eTransient);
+
+  transientCommandPool_ = device_.createCommandPool(commandPoolInfo);
+  transferFence_ = device_.createFence({});
+}
+
+void Engine::destroyCommandPool()
+{
+  device_.destroyFence(transferFence_);
+  device_.destroyCommandPool(transientCommandPool_);
+}
+
 void Engine::createInstance()
 {
   std::vector<const char*> layers;
@@ -196,9 +323,7 @@ void Engine::createInstance()
     messenger_ = instance_.createDebugUtilsMessengerEXT(chain.get<vk::DebugUtilsMessengerCreateInfoEXT>(), nullptr, dld);
   }
   else
-  {
     instance_ = vk::createInstance(instanceInfo);
-  }
 }
 
 void Engine::destroyInstance()
