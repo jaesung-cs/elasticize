@@ -10,6 +10,8 @@ namespace gpu
 template <typename T>
 class Buffer
 {
+  friend class Engine;
+
 public:
   Buffer() = delete;
   Buffer(Engine& engine, uint64_t count);
@@ -20,6 +22,9 @@ public:
 
   void toGpu();
   void fromGpu();
+
+private:
+  auto buffer() const { return buffer_; }
 
 private:
   Engine& engine_;

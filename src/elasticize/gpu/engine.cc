@@ -229,6 +229,51 @@ void Engine::addComputeShader(const std::string& filepath)
   computePipelines_.push_back(computePipeline);
 }
 
+void Engine::addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<uint32_t>& counterBuffer)
+{
+  // TODO: receive descriptor set layout and buffers from parameters
+  const auto descriptorSetLayout = computePipelines_[0].descriptorSetLayout;
+  std::vector<vk::Buffer> buffers = {
+    arrayBuffer.buffer(),
+    counterBuffer.buffer(),
+  };
+
+  const auto descriptorSetAllocateInfo = vk::DescriptorSetAllocateInfo()
+    .setDescriptorPool(descriptorPool_)
+    .setSetLayouts(descriptorSetLayout);
+  const auto descriptorSet = device_.allocateDescriptorSets(descriptorSetAllocateInfo)[0];
+
+  std::vector<vk::DescriptorBufferInfo> bufferInfos(2);
+  bufferInfos[0]
+    .setBuffer(buffers[0])
+    .setOffset(0)
+    .setRange(VK_WHOLE_SIZE);
+
+  bufferInfos[1]
+    .setBuffer(buffers[1])
+    .setOffset(0)
+    .setRange(VK_WHOLE_SIZE);
+
+  std::vector<vk::WriteDescriptorSet> writes(2);
+  writes[0]
+    .setDstBinding(0)
+    .setDstSet(descriptorSet)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1)
+    .setBufferInfo(bufferInfos[0]);
+
+  writes[1]
+    .setDstBinding(1)
+    .setDstSet(descriptorSet)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1)
+    .setBufferInfo(bufferInfos[1]);
+
+  device_.updateDescriptorSets(writes, {});
+
+  descriptorSets_.push_back(descriptorSet);
+}
+
 void Engine::createSwapchain(const window::Window& window)
 {
   // Swapchain

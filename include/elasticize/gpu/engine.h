@@ -38,6 +38,8 @@ public:
 
   void addComputeShader(const std::string& filepath);
 
+  void addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<uint32_t>& counterBuffer);
+
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
@@ -87,7 +89,7 @@ private:
   vk::PhysicalDevice physicalDevice_;
   vk::Device device_;
   vk::Queue queue_;
-  uint32_t queueIndex_;
+  uint32_t queueIndex_ = 0;
 
   // Memory pool
   uint32_t deviceIndex_ = 0;
@@ -117,6 +119,9 @@ private:
     vk::Pipeline pipeline;
   };
   std::vector<ComputePipeline> computePipelines_;
+
+  // Descriptor sets
+  std::vector<vk::DescriptorSet> descriptorSets_;
 };
 }
 }

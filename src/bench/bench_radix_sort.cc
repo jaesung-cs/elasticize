@@ -31,32 +31,27 @@ int main()
     for (int i = 0; i < n; i++)
       buffer[i] = distribution(gen);
 
-    elastic::gpu::Buffer<uint32_t> gpuBuffer(engine, n);
+    elastic::gpu::Buffer<uint32_t> arrayBuffer(engine, n);
     for (int i = 0; i < n; i++)
-      gpuBuffer[i] = buffer[i];
+      arrayBuffer[i] = buffer[i];
+
+    elastic::gpu::Buffer<uint32_t> counterBuffer(engine, n); // 1D index of [workgroupID][key]
+    for (int i = 0; i < n; i++)
+      counterBuffer[i] = 0;
+
+    engine.addDescriptorSet(arrayBuffer, counterBuffer);
 
     std::cout << "To GPU" << std::endl;
     elastic::utils::Timer toGpuTimer;
-    gpuBuffer.toGpu();
+    arrayBuffer.toGpu();
     std::cout << "Elapsed: " << toGpuTimer.elapsed() << std::endl;
 
-    std::cout << "Resetting" << std::endl;
-    elastic::utils::Timer resetTimer;
-    for (int i = 0; i < n; i++)
-      gpuBuffer[i] = 0;
-    std::cout << "Elapsed: " << resetTimer.elapsed() << std::endl;
+    // TODO: run compute shader
 
     std::cout << "From GPU" << std::endl;
     elastic::utils::Timer fromGpuTimer;
-    gpuBuffer.fromGpu();
+    counterBuffer.fromGpu();
     std::cout << "Elapsed: " << fromGpuTimer.elapsed() << std::endl;
-
-    std::cout << "Validating" << std::endl;
-    for (int i = 0; i < n; i++)
-    {
-      if (buffer[i] != gpuBuffer[i])
-        std::cout << "At " << i << ": " << gpuBuffer[i] << " (expected: " << buffer[i] << ")" << std::endl;
-    }
   }
   catch (const std::exception& e)
   {
