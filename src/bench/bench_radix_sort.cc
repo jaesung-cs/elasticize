@@ -1,5 +1,6 @@
 #include <elasticize/gpu/engine.h>
 #include <elasticize/gpu/buffer.h>
+#include <elasticize/utils/timer.h>
 
 #include <iostream>
 #include <random>
@@ -15,7 +16,7 @@ int main()
 
     std::cout << "Engine started!" << std::endl;
 
-    constexpr int n = 1000000;
+    constexpr int n = 100000;
     constexpr int keyBits = 30; // for 10-bit each component morton code
 
     std::random_device rd;
@@ -30,13 +31,23 @@ int main()
     for (int i = 0; i < n; i++)
       gpuBuffer[i] = buffer[i];
 
+    std::cout << "To GPU" << std::endl;
+    elastic::utils::Timer toGpuTimer;
     gpuBuffer.toGpu();
+    std::cout << "Elapsed: " << toGpuTimer.elapsed() << std::endl;
 
+    std::cout << "Resetting" << std::endl;
+    elastic::utils::Timer resetTimer;
     for (int i = 0; i < n; i++)
       gpuBuffer[i] = 0;
+    std::cout << "Elapsed: " << resetTimer.elapsed() << std::endl;
 
+    std::cout << "From GPU" << std::endl;
+    elastic::utils::Timer fromGpuTimer;
     gpuBuffer.fromGpu();
+    std::cout << "Elapsed: " << fromGpuTimer.elapsed() << std::endl;
 
+    std::cout << "Validating" << std::endl;
     for (int i = 0; i < n; i++)
     {
       if (buffer[i] != gpuBuffer[i])

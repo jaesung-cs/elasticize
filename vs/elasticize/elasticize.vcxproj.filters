@@ -29,6 +29,12 @@
     <Filter Include="src\elasticize\shader">
       <UniqueIdentifier>{87d8ef90-f07d-4ef5-b757-f2a9cad117a8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\elasticize\utils">
+      <UniqueIdentifier>{bdbaba24-bdc3-43e3-bf5b-624939b3b006}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\elasticize\utils">
+      <UniqueIdentifier>{4e0b81ef-a2eb-4664-ad40-0dc0ccd03847}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\elasticize\window\window.cc">
@@ -42,6 +48,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\elasticize\gpu\engine.cc">
       <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\utils\timer.cc">
+      <Filter>src\elasticize\utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -59,6 +68,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\elasticize\gpu\buffer.h">
       <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\utils\timer.h">
+      <Filter>include\elasticize\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
