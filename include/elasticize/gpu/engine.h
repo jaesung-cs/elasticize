@@ -36,6 +36,8 @@ public:
 
   void attachWindow(const window::Window& window);
 
+  void addComputeShader(const std::string& filepath);
+
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
@@ -74,6 +76,9 @@ private:
   void createCommandPool();
   void destroyCommandPool();
 
+  void createDescriptorPool();
+  void destroyDescriptorPool();
+
 private:
   Options options_;
   vk::Instance instance_;
@@ -100,6 +105,18 @@ private:
   vk::SurfaceKHR surface_;
   vk::SwapchainCreateInfoKHR swapchainInfo_;
   vk::SwapchainKHR swapchain_;
+
+  // Descriptor pool
+  vk::DescriptorPool descriptorPool_;
+
+  // Compute pipelines
+  struct ComputePipeline
+  {
+    vk::DescriptorSetLayout descriptorSetLayout;
+    vk::PipelineLayout pipelineLayout;
+    vk::Pipeline pipeline;
+  };
+  std::vector<ComputePipeline> computePipelines_;
 };
 }
 }

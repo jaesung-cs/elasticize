@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <random>
+#include <string>
 
 int main()
 {
@@ -15,6 +16,9 @@ int main()
     elastic::gpu::Engine engine(options);
 
     std::cout << "Engine started!" << std::endl;
+
+    const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
+    engine.addComputeShader(shaderDirpath + "\\count.comp.spv");
 
     constexpr int n = 1000000;
     constexpr int keyBits = 30; // for 10-bit each component morton code

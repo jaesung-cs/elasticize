@@ -1,6 +1,7 @@
 #include <elasticize/gpu/engine.h>
 
 #include <iostream>
+#include <fstream>
 
 #include <elasticize/window/window_manager.h>
 #include <elasticize/window/window.h>
@@ -38,12 +39,21 @@ Engine::Engine(Options options)
   createDevice();
   createMemoryPool();
   createCommandPool();
+  createDescriptorPool();
 }
 
 Engine::~Engine()
 {
   device_.waitIdle();
 
+  for (auto& computePipeline : computePipelines_)
+  {
+    device_.destroyDescriptorSetLayout(computePipeline.descriptorSetLayout);
+    device_.destroyPipelineLayout(computePipeline.pipelineLayout);
+    device_.destroyPipeline(computePipeline.pipeline);
+  }
+
+  destroyDescriptorPool();
   destroyCommandPool();
   destroyMemoryPool();
   destroySwapchain();
@@ -145,6 +155,78 @@ void Engine::attachWindow(const window::Window& window)
   surface_ = window.createVulkanSurface(instance_);
 
   createSwapchain(window);
+}
+
+void Engine::addComputeShader(const std::string& filepath)
+{
+  // Descriptor set layout
+  std::vector<vk::DescriptorSetLayoutBinding> bindings(2);
+  bindings[0]
+    .setBinding(0)
+    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1);
+
+  bindings[1]
+    .setBinding(1)
+    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1);
+
+  const auto descriptorSetLayoutInfo = vk::DescriptorSetLayoutCreateInfo().setBindings(bindings);
+  const auto descriptorSetLayout = device_.createDescriptorSetLayout(descriptorSetLayoutInfo);
+
+  // Pipeline layout
+  std::vector<vk::PushConstantRange> pushConstantRange(1);
+  pushConstantRange[0]
+    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+    .setOffset(0)
+    .setSize(sizeof(uint32_t) * 2);
+
+  const auto pipelineLayoutInfo = vk::PipelineLayoutCreateInfo()
+    .setSetLayouts(descriptorSetLayout)
+    .setPushConstantRanges(pushConstantRange);
+
+  const auto pipelineLayout = device_.createPipelineLayout(pipelineLayoutInfo);
+
+  // Pipeline
+  std::ifstream file(filepath, std::ios::ate | std::ios::binary);
+  if (!file.is_open())
+    throw std::runtime_error("Failed to open file: " + filepath);
+
+  size_t fileSize = (size_t)file.tellg();
+  std::vector<char> buffer(fileSize);
+  file.seekg(0);
+  file.read(buffer.data(), fileSize);
+  file.close();
+
+  std::vector<uint32_t> code;
+  auto* intPtr = reinterpret_cast<uint32_t*>(buffer.data());
+  for (int i = 0; i < fileSize / 4; i++)
+    code.push_back(intPtr[i]);
+
+  const auto shaderModuleInfo = vk::ShaderModuleCreateInfo().setCode(code);
+  const auto module = device_.createShaderModule(shaderModuleInfo);
+
+  const auto stage = vk::PipelineShaderStageCreateInfo()
+    .setStage(vk::ShaderStageFlagBits::eCompute)
+    .setModule(module)
+    .setPName("main");
+
+  const auto pipelineInfo = vk::ComputePipelineCreateInfo()
+    .setLayout(pipelineLayout)
+    .setStage(stage);
+
+  const auto pipeline = device_.createComputePipeline(nullptr, pipelineInfo).value;
+
+  device_.destroyShaderModule(module);
+
+  // Add pipeline
+  ComputePipeline computePipeline;
+  computePipeline.descriptorSetLayout = descriptorSetLayout;
+  computePipeline.pipelineLayout = pipelineLayout;
+  computePipeline.pipeline = pipeline;
+  computePipelines_.push_back(computePipeline);
 }
 
 void Engine::createSwapchain(const window::Window& window)
@@ -306,6 +388,27 @@ void Engine::destroyCommandPool()
 {
   device_.destroyFence(transferFence_);
   device_.destroyCommandPool(transientCommandPool_);
+}
+
+void Engine::createDescriptorPool()
+{
+  constexpr uint32_t maxSets = 256;
+  constexpr uint32_t maxTypeCount = 256;
+
+  std::vector<vk::DescriptorPoolSize> poolSizes = {
+    {vk::DescriptorType::eStorageBuffer, maxTypeCount},
+  };
+
+  const auto descriptorPoolInfo = vk::DescriptorPoolCreateInfo()
+    .setPoolSizes(poolSizes)
+    .setMaxSets(maxSets);
+
+  descriptorPool_ = device_.createDescriptorPool(descriptorPoolInfo);
+}
+
+void Engine::destroyDescriptorPool()
+{
+  device_.destroyDescriptorPool(descriptorPool_);
 }
 
 void Engine::createInstance()
