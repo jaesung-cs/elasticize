@@ -377,6 +377,17 @@ void Engine::selectSuitablePhysicalDevice()
 {
   // TODO: choose among candidates, now assuming one GPU available
   physicalDevice_ = instance_.enumeratePhysicalDevices()[0];
+
+  // Print physical device info
+  const auto subgroupProperties = physicalDevice_.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceSubgroupProperties>()
+    .get<vk::PhysicalDeviceSubgroupProperties>();
+
+  std::cout << "Subgroup properties:" << std::endl
+    << "  subgroup size                : " << subgroupProperties.subgroupSize << std::endl
+    << "  supported stages             : " << vk::to_string(subgroupProperties.supportedStages) << std::endl
+    << "  supported operations         : " << vk::to_string(subgroupProperties.supportedOperations) << std::endl
+    << "  quad operations in all stages: " << subgroupProperties.quadOperationsInAllStages << std::endl
+    << std::endl;
 }
 
 void Engine::createDevice()
