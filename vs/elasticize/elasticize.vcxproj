@@ -27,7 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\include\elasticize\gpu\buffer.inl" />
-    <None Include="..\..\src\elasticize\shader\radix_sort.comp" />
+    <None Include="..\..\src\elasticize\shader\count.comp" />
   </ItemGroup>
   <!-- Added to disable build up-to-date check -->
   <PropertyGroup>

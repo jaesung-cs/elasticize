@@ -1,0 +1,32 @@
+#version 450
+
+const int BLOCK_SIZE = 256;
+
+layout (local_size_x = BLOCK_SIZE) in;
+
+layout (push_constant) uniform SortInfoUbo
+{
+  uint array_size;
+  uint shift_bits; // Bit count to right shift
+  uint bit_count; // LSB bit mask
+} array_info;
+
+layout (std140, binding = 0) buffer ArraySsbo
+{
+  uint data[];
+} array;
+
+layout (std140, binding = 1) buffer CounterSsbo
+{
+  uint data[];
+} counter;
+
+shared uint local_counter[BLOCK_SIZE];
+
+void main()
+{
+  gl_GlobalInvocationID;
+  gl_WorkGroupID;
+  gl_WorkGroupSize;
+  gl_LocalInvocationID;
+}

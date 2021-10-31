@@ -74,7 +74,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\src\elasticize\shader\radix_sort.comp">
+    <None Include="..\..\src\elasticize\shader\count.comp">
       <Filter>src\elasticize\shader</Filter>
     </None>
     <None Include="..\..\include\elasticize\gpu\buffer.inl">

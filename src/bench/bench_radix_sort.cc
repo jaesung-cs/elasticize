@@ -16,7 +16,7 @@ int main()
 
     std::cout << "Engine started!" << std::endl;
 
-    constexpr int n = 100000;
+    constexpr int n = 1000000;
     constexpr int keyBits = 30; // for 10-bit each component morton code
 
     std::random_device rd;
