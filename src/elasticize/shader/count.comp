@@ -3,6 +3,7 @@
 #extension GL_KHR_shader_subgroup_basic : enable
 #extension GL_KHR_shader_subgroup_arithmetic : enable
 #extension GL_KHR_shader_subgroup_ballot : enable
+#extension GL_KHR_shader_subgroup_vote : enable
 
 const int BLOCK_SIZE = 256;
 const int RADIX_BITS = 8;
@@ -15,11 +16,11 @@ layout (push_constant) uniform SortInfoUbo {
   int bit_offset;
 };
 
-layout (std140, binding = 0) buffer ArraySsbo {
+layout (std430, binding = 0) buffer ArraySsbo {
   uint data[];
 } array;
 
-layout (std140, binding = 1) buffer CounterSsbo {
+layout (std430, binding = 1) buffer CounterSsbo {
   uint data[][RADIX_SIZE]; // Prefix sum for each workgroup
 } counter;
 
@@ -28,25 +29,29 @@ shared uint local_prefix_sum[RADIX_SIZE];
 shared uint subgroup_counter[gl_WorkGroupSize.x];
 shared uint subgroup_prefix_sum[gl_WorkGroupSize.x];
 
+void count(uint item) {
+  const uint key = bitfieldExtract(item, bit_offset, RADIX_BITS);
+
+  // Add to workgroup local counter
+  atomicAdd(local_counter[key], 1);
+}
 void main() {
   // Workgroup size is equal to radix size
   local_counter[gl_LocalInvocationID.x] = 0;
   subgroup_counter[gl_LocalInvocationID.x] = 0;
   barrier();
-  
-  // Key of current item
-  if (gl_GlobalInvocationID.x >= array_size)
-    return;
 
-  const uint item = array.data[gl_GlobalInvocationID.x];
-  const uint key = bitfieldExtract(item, bit_offset, RADIX_BITS);
-  
-  // Add to workgroup local counter
-  atomicAdd(local_counter[key], 1);
+  // Key of current item
+  bool inRange = gl_GlobalInvocationID.x < array_size;
+  if (subgroupAll(inRange))
+    count(array.data[gl_GlobalInvocationID.x]);
+  else {
+    if (inRange) count(array.data[gl_GlobalInvocationID.x]);
+  }
   barrier();
 
   // Prefix sum for each subgroup
-  local_prefix_sum[gl_LocalInvocationID.x] = subgroupInclusiveAdd(local_counter[gl_LocalInvocationID.x]);
+  local_prefix_sum[gl_LocalInvocationID.x] = subgroupExclusiveAdd(local_counter[gl_LocalInvocationID.x]);
   subgroupBarrier();
 
   // The last elements are collected and to be added to next subgroup
@@ -58,12 +63,12 @@ void main() {
   // The first subgroup deal with subgroup prefix sum
   // Assuming gl_NumSubgroups < gl_SubgroupSize
   if (gl_LocalInvocationID.x < gl_NumSubgroups)
-    subgroup_prefix_sum[gl_LocalInvocationID.x] = subgroupInclusiveAdd(subgroup_counter[gl_LocalInvocationID.x]);
+    subgroup_prefix_sum[gl_LocalInvocationID.x] = subgroupExclusiveAdd(subgroup_counter[gl_LocalInvocationID.x]);
   barrier();
 
   // Spread to subgroups
   local_prefix_sum[gl_LocalInvocationID.x] += subgroup_prefix_sum[gl_SubgroupID];
 
   // Update counter
-  counter.data[gl_LocalInvocationID.x][gl_WorkGroupID.x] = local_prefix_sum[gl_LocalInvocationID.x];
+  counter.data[gl_WorkGroupID.x][gl_LocalInvocationID.x] = local_prefix_sum[gl_LocalInvocationID.x];
 }

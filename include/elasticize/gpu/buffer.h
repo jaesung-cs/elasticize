@@ -20,6 +20,8 @@ public:
   auto& operator [] (uint64_t index) { return data_[index]; }
   const auto& operator [] (uint64_t index) const { return data_[index]; }
 
+  auto size() const { return data_.size(); }
+
   void toGpu();
   void fromGpu();
 

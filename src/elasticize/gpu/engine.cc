@@ -104,9 +104,7 @@ void Engine::transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buf
   cb.copyBuffer(stagingBuffer_, buffer, region);
   cb.end();
 
-  const auto submit = vk::SubmitInfo()
-    .setCommandBuffers(cb);
-
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
   queue_.submit(submit, transferFence_);
 
   // TODO: don't wait for transfer completion
@@ -134,9 +132,7 @@ void Engine::transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer)
   cb.copyBuffer(buffer, stagingBuffer_, region);
   cb.end();
 
-  const auto submit = vk::SubmitInfo()
-    .setCommandBuffers(cb);
-
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
   queue_.submit(submit, transferFence_);
 
   // TODO: don't wait for transfer completion
@@ -272,6 +268,36 @@ void Engine::addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<
   device_.updateDescriptorSets(writes, {});
 
   descriptorSets_.push_back(descriptorSet);
+}
+
+void Engine::runComputeShader(int n, int bitOffset)
+{
+  constexpr auto BLOCK_SIZE = 256;
+  constexpr auto RADIX_SIZE = 256;
+  const auto groupSize = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+  const auto allocateInfo = vk::CommandBufferAllocateInfo()
+    .setLevel(vk::CommandBufferLevel::ePrimary)
+    .setCommandPool(transientCommandPool_)
+    .setCommandBufferCount(1);
+
+  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
+
+  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+  cb.bindDescriptorSets(vk::PipelineBindPoint::eCompute, computePipelines_[0].pipelineLayout, 0, { descriptorSets_[0] }, {});
+  cb.bindPipeline(vk::PipelineBindPoint::eCompute, computePipelines_[0].pipeline);
+  cb.pushConstants<int>(computePipelines_[0].pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, n);
+  cb.pushConstants<int>(computePipelines_[0].pipelineLayout, vk::ShaderStageFlagBits::eCompute, sizeof(n), bitOffset);
+  cb.dispatch(groupSize, 1, 1);
+  cb.end();
+
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
+  queue_.submit(submit, transferFence_);
+
+  // TODO: don't wait for compute job completion
+  device_.waitForFences(transferFence_, true, UINT64_MAX);
+  device_.resetFences(transferFence_);
+  device_.freeCommandBuffers(transientCommandPool_, cb);
 }
 
 void Engine::createSwapchain(const window::Window& window)
