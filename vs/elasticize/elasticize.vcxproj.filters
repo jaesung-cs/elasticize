@@ -80,5 +80,8 @@
     <None Include="..\..\include\elasticize\gpu\buffer.inl">
       <Filter>include\elasticize\gpu</Filter>
     </None>
+    <None Include="..\..\src\elasticize\shader\scan.comp">
+      <Filter>src\elasticize\shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

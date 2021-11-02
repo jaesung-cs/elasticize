@@ -1,0 +1,55 @@
+#version 450
+
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+#extension GL_KHR_shader_subgroup_vote : enable
+
+const int BLOCK_SIZE = 256;
+const int RADIX_BITS = 8;
+const int RADIX_SIZE = 1 << 8;
+
+layout (local_size_x = BLOCK_SIZE) in;
+
+layout (push_constant) uniform SortInfoUbo {
+  uint array_size;
+  int bit_offset;
+};
+
+layout (std430, binding = 1) buffer CounterSsbo {
+  uint data[]; // [key][groupIndex]
+} counter;
+
+layout (std430, binding = 2) buffer ScanSsbo {
+  uint data[];
+} scan;
+
+shared uint local_prefix_sum[RADIX_SIZE];
+shared uint subgroup_counter[gl_WorkGroupSize.x];
+shared uint subgroup_prefix_sum[gl_WorkGroupSize.x];
+
+void main() {
+  const uint item = counter.data[gl_GlobalInvocationID.x];
+
+  // Prefix sum for each subgroup
+  local_prefix_sum[gl_LocalInvocationID.x] = subgroupExclusiveAdd(item);
+  subgroupBarrier();
+
+  // The last elements are collected and to be added to next subgroup
+  const uint highestActiveID = subgroupBallotFindMSB(subgroupBallot(true));
+  if (highestActiveID == gl_SubgroupInvocationID)
+    subgroup_counter[gl_SubgroupID] = local_prefix_sum[gl_LocalInvocationID.x] + item;
+  barrier();
+
+  // The first subgroup deal with subgroup prefix sum
+  // Assuming gl_NumSubgroups < gl_SubgroupSize
+  if (gl_LocalInvocationID.x < gl_NumSubgroups)
+    subgroup_prefix_sum[gl_LocalInvocationID.x] = subgroupExclusiveAdd(subgroup_counter[gl_LocalInvocationID.x]);
+  barrier();
+
+  // Spread to subgroups
+  local_prefix_sum[gl_LocalInvocationID.x] += subgroup_prefix_sum[gl_SubgroupID];
+
+  // Update scan
+  scan.data[gl_GlobalInvocationID.x] = local_prefix_sum[gl_LocalInvocationID.x];
+}

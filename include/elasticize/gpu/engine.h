@@ -37,9 +37,9 @@ public:
   void attachWindow(const window::Window& window);
 
   void addComputeShader(const std::string& filepath);
-  void addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<uint32_t>& counterBuffer);
+  void addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<uint32_t>& counterBuffer, const Buffer<uint32_t>& scanBuffer);
 
-  void runComputeShader(int n, int bitOffset);
+  void runComputeShader(int computeShaderId, int n, int bitOffset);
 
 private:
   // By friend objects
