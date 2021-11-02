@@ -42,12 +42,11 @@ void main() {
   barrier();
 
   // Key of current item
-  bool inRange = gl_GlobalInvocationID.x < array_size;
+  const bool inRange = gl_GlobalInvocationID.x < array_size;
   if (subgroupAll(inRange))
     count(array.data[gl_GlobalInvocationID.x]);
-  else {
-    if (inRange) count(array.data[gl_GlobalInvocationID.x]);
-  }
+  else if (inRange)
+    count(array.data[gl_GlobalInvocationID.x]);
   barrier();
 
   // Prefix sum for each subgroup
