@@ -43,7 +43,7 @@ void main() {
   // Workgroup size is equal to radix size
   local_counter[gl_LocalInvocationID.x] = 0;
   barrier();
-
+  
   // Key of current item
   const bool in_range = gl_GlobalInvocationID.x < array_size;
   if (subgroupAll(in_range))
@@ -51,7 +51,4 @@ void main() {
   else if (in_range)
     count(array.data[gl_GlobalInvocationID.x].key);
   barrier();
-
-  // Update counter
-  counter.data[gl_LocalInvocationID.x * gl_NumWorkGroups.x + gl_WorkGroupID.x] = local_counter[gl_LocalInvocationID.x];
 }

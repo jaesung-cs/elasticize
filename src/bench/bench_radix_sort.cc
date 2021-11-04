@@ -20,7 +20,9 @@ int main()
 
     const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
     engine.addComputeShader(shaderDirpath + "\\count.comp.spv");
-    engine.addComputeShader(shaderDirpath + "\\scan.comp.spv");
+    engine.addComputeShader(shaderDirpath + "\\scan_forward.comp.spv");
+    engine.addComputeShader(shaderDirpath + "\\scan_backward.comp.spv");
+    engine.addComputeShader(shaderDirpath + "\\distribute.comp.spv");
 
     constexpr int n = 1000000;
     constexpr int keyBits = 30; // for 10-bit each component morton code
@@ -30,24 +32,35 @@ int main()
     std::mt19937 gen(1234);
     std::uniform_int_distribution<uint32_t> distribution(0, (1 << keyBits) - 1);
 
-    std::vector<uint32_t> buffer(n);
-    for (int i = 0; i < n; i++)
-      buffer[i] = distribution(gen);
+    struct KeyValue
+    {
+      uint32_t key;
+      uint32_t value;
+    };
 
-    elastic::gpu::Buffer<uint32_t> arrayBuffer(engine, n);
+    std::vector<KeyValue> buffer(n);
+    for (uint32_t i = 0; i < n; i++)
+      buffer[i] = { distribution(gen), i };
+
+
+    elastic::gpu::Buffer<KeyValue> arrayBuffer(engine, n);
     for (int i = 0; i < n; i++)
       arrayBuffer[i] = buffer[i];
 
     const auto alignedSize = (n + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
-    elastic::gpu::Buffer<uint32_t> counterBuffer(engine, alignedSize); // 1D index of [workgroupID][key]
+    uint32_t counterSize = 0;
+    uint32_t simdSize = alignedSize;
+    do
+    {
+      counterSize += simdSize;
+      simdSize = (simdSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    } while (simdSize > 1);
+
+    elastic::gpu::Buffer<uint32_t> counterBuffer(engine, counterSize); // 1D index of [workgroupID][key]
     for (int i = 0; i < counterBuffer.size(); i++)
       counterBuffer[i] = 0;
 
-    elastic::gpu::Buffer<uint32_t> scanBuffer(engine, alignedSize); // 1D index of [workgroupID][key]
-    for (int i = 0; i < scanBuffer.size(); i++)
-      scanBuffer[i] = 0;
-
-    engine.addDescriptorSet(arrayBuffer, counterBuffer, scanBuffer);
+    engine.addDescriptorSet(arrayBuffer, counterBuffer);
 
     // Move input from CPU to GPU
     std::cout << "To GPU" << std::endl;
@@ -77,7 +90,7 @@ int main()
         const auto index = blockIndex * BLOCK_SIZE + i;
         if (index < n)
         {
-          const auto item = arrayBuffer[index];
+          const auto item = arrayBuffer[index].key;
           const auto key = (static_cast<uint32_t>(item) >> bitOffset) & (RADIX_SIZE - 1);
           localCounter[key]++;
         }
@@ -92,55 +105,74 @@ int main()
     }
     std::cout << "Elapsed: " << cpuCountTimer.elapsed() << std::endl;
 
-    // Scan job in GPU
-    std::cout << "Scan in GPU" << std::endl;
+    // Scan forward job in GPU
+    std::cout << "Scan forward in GPU" << std::endl;
     elastic::utils::Timer gpuScanTimer;
-    engine.runComputeShader(1, alignedSize, bitOffset);
+    uint32_t scanOffset = 0;
+    simdSize = alignedSize;
+
+    struct Phase
+    {
+      uint32_t simdSize;
+      uint32_t scanOffset;
+    };
+    std::vector<Phase> phases;
+    do
+    {
+      std::cout << "array size, scan offset: " << simdSize << ", " << scanOffset << std::endl;
+      phases.push_back(Phase{ simdSize, scanOffset });
+      engine.runComputeShader(1, simdSize, bitOffset, scanOffset);
+      scanOffset += simdSize;
+      simdSize = (simdSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    } while (simdSize > 1);
     std::cout << "Elapsed: " << gpuScanTimer.elapsed() << std::endl;
+
+    // Scan backward job in GPU
+    std::cout << "Scan backward in GPU" << std::endl;
+    elastic::utils::Timer gpuScanBackwardTimer;
+    for (int i = phases.size() - 1; i >= 0; i--)
+    {
+      const auto& phase = phases[i];
+      engine.runComputeShader(2, phase.simdSize, bitOffset, phase.scanOffset);
+    }
+    std::cout << "Elapsed: " << gpuScanBackwardTimer.elapsed() << std::endl;
 
     // Scan job in CPU
     std::cout << "Scan in CPU" << std::endl;
     elastic::utils::Timer cpuScanTimer;
-    std::vector<uint32_t> cpuScanBuffer(alignedSize);
-    for (int blockIndex = 0; blockIndex < groupSize; blockIndex++)
+    uint32_t sum = 0;
+    for (int i = 0; i < n; i++)
     {
-      // Exclusive scan
-      uint32_t sum = 0;
-      for (int i = 0; i < BLOCK_SIZE; i++)
-      {
-        const auto index = blockIndex * BLOCK_SIZE + i;
-        const auto count = cpuCounterBuffer[index];
-        cpuScanBuffer[index] = sum;
-        sum += count;
-      }
+      const auto count = cpuCounterBuffer[i];
+      cpuCounterBuffer[i] = sum;
+      sum += count;
     }
     std::cout << "Elapsed: " << cpuScanTimer.elapsed() << std::endl;
 
+    // Now prefix sum of counter[key][block_index], meaning start offset of each group
+    std::cout << "Distribute in GPU" << std::endl;
+    elastic::utils::Timer gpuDistributeTimer;
+    engine.runComputeShader(3, n, bitOffset);
+    std::cout << "Elapsed: " << gpuDistributeTimer.elapsed() << std::endl;
+    
     // Move result from GPU to CPU
     std::cout << "From GPU" << std::endl;
     elastic::utils::Timer fromGpuTimer;
     counterBuffer.fromGpu();
-    scanBuffer.fromGpu();
     std::cout << "Elapsed: " << fromGpuTimer.elapsed() << std::endl;
 
     // Validate
     std::cout << "Validating count" << std::endl;
-    for (int i = 0; i < counterBuffer.size(); i++)
+    for (int i = 0; i < n; i++)
     {
       if (cpuCounterBuffer[i] != counterBuffer[i])
         std::cout << "Mismatch at " << std::setw(8) << i << ": value " << counterBuffer[i] << " (expected: " << cpuCounterBuffer[i] << ")" << std::endl;
-    }
-    std::cout << "Validating scan" << std::endl;
-    for (int i = 0; i < scanBuffer.size(); i++)
-    {
-      if (cpuScanBuffer[i] != scanBuffer[i])
-        std::cout << "Mismatch at " << std::setw(8) << i << ": value " << scanBuffer[i] << " (expected: " << cpuScanBuffer[i] << ")" << std::endl;
     }
     std::cout << "Validation done" << std::endl;
 
     std::cout << "First two block:" << std::endl;
     for (int i = 0; i < BLOCK_SIZE * 2; i++)
-      std::cout << std::setw(4) << i << ' ' << std::setw(4) << counterBuffer[i] << ' ' << std::setw(4) << scanBuffer[i] << std::endl;
+      std::cout << std::setw(4) << i << ' ' << std::setw(4) << counterBuffer[i] << std::endl;
   }
   catch (const std::exception& e)
   {

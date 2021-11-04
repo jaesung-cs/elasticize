@@ -14,31 +14,31 @@ layout (local_size_x = BLOCK_SIZE) in;
 layout (push_constant) uniform SortInfoUbo {
   uint array_size;
   int bit_offset;
+  uint scan_offset;
 };
 
 layout (std430, binding = 1) buffer CounterSsbo {
   uint data[]; // [key][groupIndex]
 } counter;
 
-layout (std430, binding = 2) buffer ScanSsbo {
-  uint data[];
-} scan;
-
 shared uint local_prefix_sum[RADIX_SIZE];
 shared uint subgroup_counter[gl_WorkGroupSize.x];
 shared uint subgroup_prefix_sum[gl_WorkGroupSize.x];
 
 void main() {
-  const uint item = counter.data[gl_GlobalInvocationID.x];
+  uint item;
+  if (gl_GlobalInvocationID.x < array_size)
+    item = counter.data[scan_offset + gl_GlobalInvocationID.x];
+  else
+    item = 0;
 
   // Prefix sum for each subgroup
   local_prefix_sum[gl_LocalInvocationID.x] = subgroupExclusiveAdd(item);
   subgroupBarrier();
 
-  // The last elements are collected and to be added to next subgroup
-  const uint highestActiveID = subgroupBallotFindMSB(subgroupBallot(true));
-  if (highestActiveID == gl_SubgroupInvocationID)
-    subgroup_counter[gl_SubgroupID] = local_prefix_sum[gl_LocalInvocationID.x] + item;
+  // One exceution in subgroup
+  if (gl_LocalInvocationID.x % gl_SubgroupSize == gl_SubgroupSize - 1)
+    subgroup_counter[gl_LocalInvocationID.x / gl_SubgroupSize] = local_prefix_sum[gl_LocalInvocationID.x] + item;
   barrier();
 
   // The first subgroup deal with subgroup prefix sum
@@ -48,8 +48,14 @@ void main() {
   barrier();
 
   // Spread to subgroups
-  local_prefix_sum[gl_LocalInvocationID.x] += subgroup_prefix_sum[gl_SubgroupID];
+  local_prefix_sum[gl_LocalInvocationID.x] += subgroup_prefix_sum[gl_LocalInvocationID.x / gl_SubgroupSize];
+  barrier();
 
-  // Update scan
-  scan.data[gl_GlobalInvocationID.x] = local_prefix_sum[gl_LocalInvocationID.x];
+  // Update counter prefix sum
+  if (gl_GlobalInvocationID.x < array_size)
+    counter.data[scan_offset + gl_GlobalInvocationID.x] = local_prefix_sum[gl_LocalInvocationID.x];
+
+  // Update to the next level counter
+  if (gl_LocalInvocationID.x == gl_WorkGroupSize.x - 1)
+    counter.data[scan_offset + array_size + gl_WorkGroupID.x] = local_prefix_sum[gl_WorkGroupSize.x - 1] + item;
 }

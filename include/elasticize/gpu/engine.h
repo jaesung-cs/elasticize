@@ -37,14 +37,21 @@ public:
   void attachWindow(const window::Window& window);
 
   void addComputeShader(const std::string& filepath);
-  void addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<uint32_t>& counterBuffer, const Buffer<uint32_t>& scanBuffer);
 
-  void runComputeShader(int computeShaderId, int n, int bitOffset);
+  template <typename T, typename U>
+  void addDescriptorSet(const Buffer<T>& arrayBuffer, const Buffer<U>& counterBuffer)
+  {
+    addDescriptorSet(arrayBuffer.buffer(), counterBuffer.buffer());
+  }
+
+  void runComputeShader(int computeShaderId, int n, int bitOffset, int scanOffset = 0);
 
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
   void destroyBuffer(vk::Buffer buffer);
+
+  void addDescriptorSet(vk::Buffer arrayBuffer, vk::Buffer counterBuffer);
 
   template <typename T>
   void transferToGpu(const std::vector<T>& data, vk::Buffer buffer)

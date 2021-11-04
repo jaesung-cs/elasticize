@@ -156,7 +156,7 @@ void Engine::attachWindow(const window::Window& window)
 void Engine::addComputeShader(const std::string& filepath)
 {
   // Descriptor set layout
-  std::vector<vk::DescriptorSetLayoutBinding> bindings(3);
+  std::vector<vk::DescriptorSetLayoutBinding> bindings(2);
   bindings[0]
     .setBinding(0)
     .setStageFlags(vk::ShaderStageFlagBits::eCompute)
@@ -169,12 +169,6 @@ void Engine::addComputeShader(const std::string& filepath)
     .setDescriptorType(vk::DescriptorType::eStorageBuffer)
     .setDescriptorCount(1);
 
-  bindings[2]
-    .setBinding(2)
-    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
-    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
-    .setDescriptorCount(1);
-
   const auto descriptorSetLayoutInfo = vk::DescriptorSetLayoutCreateInfo().setBindings(bindings);
   const auto descriptorSetLayout = device_.createDescriptorSetLayout(descriptorSetLayoutInfo);
 
@@ -183,7 +177,7 @@ void Engine::addComputeShader(const std::string& filepath)
   pushConstantRange[0]
     .setStageFlags(vk::ShaderStageFlagBits::eCompute)
     .setOffset(0)
-    .setSize(sizeof(uint32_t) * 2);
+    .setSize(sizeof(uint32_t) * 3);
 
   const auto pipelineLayoutInfo = vk::PipelineLayoutCreateInfo()
     .setSetLayouts(descriptorSetLayout)
@@ -231,14 +225,13 @@ void Engine::addComputeShader(const std::string& filepath)
   computePipelines_.push_back(computePipeline);
 }
 
-void Engine::addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<uint32_t>& counterBuffer, const Buffer<uint32_t>& scanBuffer)
+void Engine::addDescriptorSet(vk::Buffer arrayBuffer, vk::Buffer counterBuffer)
 {
   // TODO: receive descriptor set layout and buffers from parameters
   const auto descriptorSetLayout = computePipelines_[0].descriptorSetLayout;
   std::vector<vk::Buffer> buffers = {
-    arrayBuffer.buffer(),
-    counterBuffer.buffer(),
-    scanBuffer.buffer(),
+    arrayBuffer,
+    counterBuffer,
   };
 
   const auto descriptorSetAllocateInfo = vk::DescriptorSetAllocateInfo()
@@ -246,7 +239,7 @@ void Engine::addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<
     .setSetLayouts(descriptorSetLayout);
   const auto descriptorSet = device_.allocateDescriptorSets(descriptorSetAllocateInfo)[0];
 
-  std::vector<vk::DescriptorBufferInfo> bufferInfos(3);
+  std::vector<vk::DescriptorBufferInfo> bufferInfos(2);
   bufferInfos[0]
     .setBuffer(buffers[0])
     .setOffset(0)
@@ -257,12 +250,7 @@ void Engine::addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<
     .setOffset(0)
     .setRange(VK_WHOLE_SIZE);
 
-  bufferInfos[2]
-    .setBuffer(buffers[2])
-    .setOffset(0)
-    .setRange(VK_WHOLE_SIZE);
-
-  std::vector<vk::WriteDescriptorSet> writes(3);
+  std::vector<vk::WriteDescriptorSet> writes(2);
   writes[0]
     .setDstBinding(0)
     .setDstSet(descriptorSet)
@@ -277,19 +265,12 @@ void Engine::addDescriptorSet(const Buffer<uint32_t>& arrayBuffer, const Buffer<
     .setDescriptorCount(1)
     .setBufferInfo(bufferInfos[1]);
 
-  writes[2]
-    .setDstBinding(2)
-    .setDstSet(descriptorSet)
-    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
-    .setDescriptorCount(1)
-    .setBufferInfo(bufferInfos[2]);
-
   device_.updateDescriptorSets(writes, {});
 
   descriptorSets_.push_back(descriptorSet);
 }
 
-void Engine::runComputeShader(int computeShaderId, int n, int bitOffset)
+void Engine::runComputeShader(int computeShaderId, int n, int bitOffset, int scanOffset)
 {
   constexpr auto BLOCK_SIZE = 256;
   constexpr auto RADIX_SIZE = 256;
@@ -307,6 +288,7 @@ void Engine::runComputeShader(int computeShaderId, int n, int bitOffset)
   cb.bindPipeline(vk::PipelineBindPoint::eCompute, computePipelines_[computeShaderId].pipeline);
   cb.pushConstants<int>(computePipelines_[computeShaderId].pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, n);
   cb.pushConstants<int>(computePipelines_[computeShaderId].pipelineLayout, vk::ShaderStageFlagBits::eCompute, sizeof(n), bitOffset);
+  cb.pushConstants<int>(computePipelines_[computeShaderId].pipelineLayout, vk::ShaderStageFlagBits::eCompute, sizeof(n) + sizeof(bitOffset), scanOffset);
   cb.dispatch(groupSize, 1, 1);
   cb.end();
 
