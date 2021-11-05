@@ -28,6 +28,7 @@
   <ItemGroup>
     <None Include="..\..\include\elasticize\gpu\buffer.inl" />
     <None Include="..\..\src\elasticize\shader\count.comp" />
+    <None Include="..\..\src\elasticize\shader\distribute.comp" />
     <None Include="..\..\src\elasticize\shader\scan_forward.comp" />
     <None Include="..\..\src\elasticize\shader\scan_backward.comp" />
   </ItemGroup>

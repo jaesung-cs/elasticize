@@ -36,14 +36,19 @@ int main()
     {
       uint32_t key;
       uint32_t value;
+
+      bool operator != (const KeyValue& rhs) const
+      {
+        return key != rhs.key || value != rhs.value;
+      }
     };
 
     std::vector<KeyValue> buffer(n);
     for (uint32_t i = 0; i < n; i++)
       buffer[i] = { distribution(gen), i };
 
-
     elastic::gpu::Buffer<KeyValue> arrayBuffer(engine, n);
+    elastic::gpu::Buffer<KeyValue> outBuffer(engine, n);
     for (int i = 0; i < n; i++)
       arrayBuffer[i] = buffer[i];
 
@@ -60,7 +65,7 @@ int main()
     for (int i = 0; i < counterBuffer.size(); i++)
       counterBuffer[i] = 0;
 
-    engine.addDescriptorSet(arrayBuffer, counterBuffer);
+    engine.addDescriptorSet(arrayBuffer, counterBuffer, outBuffer);
 
     // Move input from CPU to GPU
     std::cout << "To GPU" << std::endl;
@@ -159,14 +164,29 @@ int main()
     std::cout << "From GPU" << std::endl;
     elastic::utils::Timer fromGpuTimer;
     counterBuffer.fromGpu();
+    outBuffer.fromGpu();
     std::cout << "Elapsed: " << fromGpuTimer.elapsed() << std::endl;
+
+    // CPU radix sort
+    std::cout << "CPU radix sort" << std::endl;
+    elastic::utils::Timer cpuRadixSortTimer;
+    std::stable_sort(buffer.begin(), buffer.end(), [RADIX_SIZE](const KeyValue& lhs, const KeyValue& rhs)
+      {
+        return (lhs.key & (RADIX_SIZE - 1)) < (rhs.key & (RADIX_SIZE - 1));
+      });
+    std::cout << "Elapsed: " << cpuRadixSortTimer.elapsed() << std::endl;
 
     // Validate
     std::cout << "Validating count" << std::endl;
     for (int i = 0; i < n; i++)
     {
       if (cpuCounterBuffer[i] != counterBuffer[i])
-        std::cout << "Mismatch at " << std::setw(8) << i << ": value " << counterBuffer[i] << " (expected: " << cpuCounterBuffer[i] << ")" << std::endl;
+        std::cout << "Counter mismatch at " << std::setw(8) << i << ": value " << counterBuffer[i] << " (expected: " << cpuCounterBuffer[i] << ")" << std::endl;
+    }
+    for (int i = 0; i < n; i++)
+    {
+      if (buffer[i] != outBuffer[i])
+        std::cout << "Buffer mismatch at " << std::setw(8) << i << ": value " << std::hex << std::setw(8) << outBuffer[i].key << " (expected: " << std::setw(8) << buffer[i].key << std::dec << ")" << std::endl;
     }
     std::cout << "Validation done" << std::endl;
 

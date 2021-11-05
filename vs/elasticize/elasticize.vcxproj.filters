@@ -86,5 +86,8 @@
     <None Include="..\..\src\elasticize\shader\scan_backward.comp">
       <Filter>src\elasticize\shader</Filter>
     </None>
+    <None Include="..\..\src\elasticize\shader\distribute.comp">
+      <Filter>src\elasticize\shader</Filter>
+    </None>
   </ItemGroup>
 </Project>
