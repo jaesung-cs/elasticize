@@ -26,7 +26,7 @@ int main()
     engine.addComputeShader(shaderDirpath + "\\distribute.comp.spv");
 
     constexpr int n = 1000000;
-    constexpr int keyBits = 14; // for 10-bit each component morton code
+    constexpr int keyBits = 30; // for 10-bit each component morton code
     constexpr int BLOCK_SIZE = 256;
     constexpr int RADIX_SIZE = 256;
     constexpr int RADIX_BITS = 8;
@@ -134,7 +134,7 @@ int main()
     // CPU radix sort
     std::cout << "CPU radix sort" << std::endl;
     elastic::utils::Timer cpuRadixSortTimer;
-    std::stable_sort(std::execution::par,
+    std::sort(std::execution::par,
       buffer.begin(), buffer.end(), [RADIX_SIZE](const KeyValue& lhs, const KeyValue& rhs)
       {
         return lhs.key < rhs.key;
@@ -145,7 +145,7 @@ int main()
     std::cout << "Validating count" << std::endl;
     for (int i = 0; i < n; i++)
     {
-      if (buffer[i] != arrayBuffer[i])
+      if (buffer[i].key != arrayBuffer[i].key)
         std::cout << "Buffer mismatch at " << std::setw(8) << i << ": value " << std::hex << std::setw(8) << arrayBuffer[i].key << " (expected: " << std::setw(8) << buffer[i].key << std::dec << ")" << std::endl;
     }
     std::cout << "Validation done" << std::endl;
