@@ -6,6 +6,7 @@
 #include <random>
 #include <string>
 #include <iomanip>
+#include <execution>
 
 int main()
 {
@@ -133,7 +134,8 @@ int main()
     // CPU radix sort
     std::cout << "CPU radix sort" << std::endl;
     elastic::utils::Timer cpuRadixSortTimer;
-    std::stable_sort(buffer.begin(), buffer.end(), [RADIX_SIZE](const KeyValue& lhs, const KeyValue& rhs)
+    std::stable_sort(std::execution::par,
+      buffer.begin(), buffer.end(), [RADIX_SIZE](const KeyValue& lhs, const KeyValue& rhs)
       {
         return lhs.key < rhs.key;
       });
