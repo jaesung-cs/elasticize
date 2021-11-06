@@ -1,0 +1,145 @@
+#version 450
+
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+#extension GL_KHR_shader_subgroup_vote : enable
+
+const int BLOCK_SIZE = 256;
+const int RADIX_BITS = 8;
+const int RADIX_SIZE = 1 << 8;
+
+layout (local_size_x = BLOCK_SIZE) in;
+
+layout (push_constant) uniform SortInfoUbo {
+  uint array_size;
+  int bit_offset;
+  uint scan_offset;
+};
+
+struct KeyValue {
+  uint key;
+  uint value;
+};
+
+layout (std430, binding = 0) buffer ArraySsbo {
+  KeyValue data[];
+} array;
+
+layout (std430, binding = 1) buffer CounterSsbo {
+  uint data[]; // Prefix sum for each workgroup
+} counter;
+
+layout (std430, binding = 2) buffer OutArraySsbo {
+  KeyValue data[];
+} out_array;
+
+shared uint local_counter[4];
+shared uint local_offset[BLOCK_SIZE];
+shared uint local_offset_scan[BLOCK_SIZE];
+shared uint subgroup_local_offset[BLOCK_SIZE];
+shared uint subgroup_local_offset_scan[BLOCK_SIZE];
+shared KeyValue in_memory[BLOCK_SIZE];
+shared KeyValue out_memory[BLOCK_SIZE];
+
+uint toGlobalKey(uint item) {
+  return bitfieldExtract(item, bit_offset, RADIX_BITS);
+}
+
+uint toKey(uint item, int bit_offset) {
+  return bitfieldExtract(item, bit_offset, 2);
+}
+
+void count(uint key) {
+  // 2-bits 4-way radix sort, 4 passes
+  // Pack 4 8-bit counters to uint, each counter counts pass
+  // Add to workgroup local counter
+  atomicAdd(local_counter[key], 1);
+  local_offset[gl_LocalInvocationID.x] = 1 << (key * 8);
+}
+
+void main() {
+  uint item = 0;
+  const bool in_range = gl_GlobalInvocationID.x < array_size;
+  
+  // Move to local shared memory
+  if (in_range)
+    in_memory[gl_LocalInvocationID.x] = array.data[gl_GlobalInvocationID.x];
+
+  // 2-bit local radix sort
+  for (int local_bit_offset = 0; local_bit_offset < RADIX_BITS; local_bit_offset += 2) {
+    // Workgroup size is equal to radix size
+    local_counter[gl_LocalInvocationID.x] = 0;
+
+    // TODO: or subgroup operation?
+    if (gl_LocalInvocationID.x == 0) {
+      local_counter[0] = 0;
+      local_counter[1] = 0;
+      local_counter[2] = 0;
+      local_counter[3] = 0;
+    }
+    barrier();
+
+    if (in_range) {
+      item = in_memory[gl_LocalInvocationID.x].key;
+      const uint key = toKey(item, bit_offset + local_bit_offset);
+      
+      // 2-bit count
+      count(key);
+      barrier();
+      
+      // Prefix sum of 4 counters
+      // TODO: or subgroup operation?
+      if (gl_LocalInvocationID.x == 0) {
+        local_counter[1] += local_counter[0];
+        local_counter[2] += local_counter[1];
+        local_counter[3] = local_counter[2];
+        local_counter[2] = local_counter[1];
+        local_counter[1] = local_counter[0];
+        local_counter[0] = 0;
+      }
+
+      // Scan offsets
+      local_offset_scan[gl_LocalInvocationID.x] = subgroupExclusiveAdd(local_offset[gl_LocalInvocationID.x]);
+      subgroupBarrier();
+
+      const uint highestActiveID = subgroupMax(gl_LocalInvocationID.x);
+      if (gl_LocalInvocationID.x % gl_SubgroupSize == 0)
+        subgroup_local_offset[gl_LocalInvocationID.x / gl_SubgroupSize] = local_offset_scan[highestActiveID] + local_offset[highestActiveID];
+      barrier();
+
+      if (gl_LocalInvocationID.x < gl_NumSubgroups)
+        subgroup_local_offset_scan[gl_LocalInvocationID.x] = subgroupExclusiveAdd(subgroup_local_offset[gl_LocalInvocationID.x]);
+      subgroupBarrier();
+
+      local_offset_scan[gl_LocalInvocationID.x] += subgroup_local_offset_scan[gl_LocalInvocationID.x / gl_SubgroupSize];
+      barrier();
+
+      // Compute offset
+      uint offset = local_counter[key] + bitfieldExtract(local_offset_scan[gl_LocalInvocationID.x], 8 * int(key), 8);
+      out_memory[offset] = in_memory[gl_LocalInvocationID.x];
+      barrier();
+
+      // Move back to original array
+      in_memory[gl_LocalInvocationID.x] = out_memory[gl_LocalInvocationID.x];
+      barrier();
+    }
+  }
+
+  // Initialize local offset per key
+  local_offset[gl_LocalInvocationID.x] = BLOCK_SIZE;
+  barrier();
+
+  // Move back to global memory
+  if (in_range) {
+    item = in_memory[gl_LocalInvocationID.x].key;
+    uint key = toGlobalKey(item);
+
+    atomicMin(local_offset[key], gl_LocalInvocationID.x);
+    barrier();
+    
+    uint go = counter.data[key * gl_NumWorkGroups.x + gl_WorkGroupID.x];
+    uint lo = local_offset[key];
+    out_array.data[go + gl_LocalInvocationID.x - lo] = in_memory[gl_LocalInvocationID.x];
+  }
+}

@@ -1,0 +1,27 @@
+#version 450
+
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+#extension GL_KHR_shader_subgroup_vote : enable
+
+const int BLOCK_SIZE = 256;
+const int RADIX_BITS = 8;
+const int RADIX_SIZE = 1 << 8;
+
+layout (local_size_x = BLOCK_SIZE) in;
+
+layout (push_constant) uniform SortInfoUbo {
+  uint array_size;
+  int bit_offset;
+  uint scan_offset;
+};
+
+layout (std430, binding = 1) buffer CounterSsbo {
+  uint data[]; // [key][groupIndex]
+} counter;
+
+void main() {
+  if (gl_GlobalInvocationID.x < array_size)
+    counter.data[scan_offset + gl_GlobalInvocationID.x] += counter.data[scan_offset + array_size + gl_GlobalInvocationID.x / BLOCK_SIZE];
+}

@@ -1,6 +1,7 @@
 #include <elasticize/gpu/engine.h>
 
 #include <iostream>
+#include <fstream>
 
 #include <elasticize/window/window_manager.h>
 #include <elasticize/window/window.h>
@@ -38,12 +39,21 @@ Engine::Engine(Options options)
   createDevice();
   createMemoryPool();
   createCommandPool();
+  createDescriptorPool();
 }
 
 Engine::~Engine()
 {
   device_.waitIdle();
 
+  for (auto& computePipeline : computePipelines_)
+  {
+    device_.destroyDescriptorSetLayout(computePipeline.descriptorSetLayout);
+    device_.destroyPipelineLayout(computePipeline.pipelineLayout);
+    device_.destroyPipeline(computePipeline.pipeline);
+  }
+
+  destroyDescriptorPool();
   destroyCommandPool();
   destroyMemoryPool();
   destroySwapchain();
@@ -94,9 +104,7 @@ void Engine::transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buf
   cb.copyBuffer(stagingBuffer_, buffer, region);
   cb.end();
 
-  const auto submit = vk::SubmitInfo()
-    .setCommandBuffers(cb);
-
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
   queue_.submit(submit, transferFence_);
 
   // TODO: don't wait for transfer completion
@@ -124,9 +132,7 @@ void Engine::transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer)
   cb.copyBuffer(buffer, stagingBuffer_, region);
   cb.end();
 
-  const auto submit = vk::SubmitInfo()
-    .setCommandBuffers(cb);
-
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
   queue_.submit(submit, transferFence_);
 
   // TODO: don't wait for transfer completion
@@ -138,6 +144,34 @@ void Engine::transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer)
   std::memcpy(data, stagingBufferMap_, size);
 }
 
+void Engine::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize byteSize)
+{
+  // To target buffer
+  const auto region = vk::BufferCopy()
+    .setSrcOffset(0)
+    .setDstOffset(0)
+    .setSize(byteSize);
+
+  const auto allocateInfo = vk::CommandBufferAllocateInfo()
+    .setLevel(vk::CommandBufferLevel::ePrimary)
+    .setCommandPool(transientCommandPool_)
+    .setCommandBufferCount(1);
+
+  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
+
+  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+  cb.copyBuffer(srcBuffer, dstBuffer, region);
+  cb.end();
+
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
+  queue_.submit(submit, transferFence_);
+
+  // TODO: don't wait for transfer completion
+  device_.waitForFences(transferFence_, true, UINT64_MAX);
+  device_.resetFences(transferFence_);
+  device_.freeCommandBuffers(transientCommandPool_, cb);
+}
+
 void Engine::attachWindow(const window::Window& window)
 {
   destroySwapchain();
@@ -145,6 +179,173 @@ void Engine::attachWindow(const window::Window& window)
   surface_ = window.createVulkanSurface(instance_);
 
   createSwapchain(window);
+}
+
+void Engine::addComputeShader(const std::string& filepath)
+{
+  // Descriptor set layout
+  std::vector<vk::DescriptorSetLayoutBinding> bindings(3);
+  bindings[0]
+    .setBinding(0)
+    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1);
+
+  bindings[1]
+    .setBinding(1)
+    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1);
+
+  bindings[2]
+    .setBinding(2)
+    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1);
+
+  const auto descriptorSetLayoutInfo = vk::DescriptorSetLayoutCreateInfo().setBindings(bindings);
+  const auto descriptorSetLayout = device_.createDescriptorSetLayout(descriptorSetLayoutInfo);
+
+  // Pipeline layout
+  std::vector<vk::PushConstantRange> pushConstantRange(1);
+  pushConstantRange[0]
+    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+    .setOffset(0)
+    .setSize(sizeof(uint32_t) * 3);
+
+  const auto pipelineLayoutInfo = vk::PipelineLayoutCreateInfo()
+    .setSetLayouts(descriptorSetLayout)
+    .setPushConstantRanges(pushConstantRange);
+
+  const auto pipelineLayout = device_.createPipelineLayout(pipelineLayoutInfo);
+
+  // Pipeline
+  std::ifstream file(filepath, std::ios::ate | std::ios::binary);
+  if (!file.is_open())
+    throw std::runtime_error("Failed to open file: " + filepath);
+
+  size_t fileSize = (size_t)file.tellg();
+  std::vector<char> buffer(fileSize);
+  file.seekg(0);
+  file.read(buffer.data(), fileSize);
+  file.close();
+
+  std::vector<uint32_t> code;
+  auto* intPtr = reinterpret_cast<uint32_t*>(buffer.data());
+  for (int i = 0; i < fileSize / 4; i++)
+    code.push_back(intPtr[i]);
+
+  const auto shaderModuleInfo = vk::ShaderModuleCreateInfo().setCode(code);
+  const auto module = device_.createShaderModule(shaderModuleInfo);
+
+  const auto stage = vk::PipelineShaderStageCreateInfo()
+    .setStage(vk::ShaderStageFlagBits::eCompute)
+    .setModule(module)
+    .setPName("main");
+
+  const auto pipelineInfo = vk::ComputePipelineCreateInfo()
+    .setLayout(pipelineLayout)
+    .setStage(stage);
+
+  const auto pipeline = device_.createComputePipeline(nullptr, pipelineInfo).value;
+
+  device_.destroyShaderModule(module);
+
+  // Add pipeline
+  ComputePipeline computePipeline;
+  computePipeline.descriptorSetLayout = descriptorSetLayout;
+  computePipeline.pipelineLayout = pipelineLayout;
+  computePipeline.pipeline = pipeline;
+  computePipelines_.push_back(computePipeline);
+}
+
+void Engine::addDescriptorSet(vk::Buffer arrayBuffer, vk::Buffer counterBuffer, vk::Buffer outBuffer)
+{
+  // TODO: receive descriptor set layout and buffers from parameters
+  const auto descriptorSetLayout = computePipelines_[0].descriptorSetLayout;
+  std::vector<vk::Buffer> buffers = {
+    arrayBuffer,
+    counterBuffer,
+    outBuffer,
+  };
+
+  const auto descriptorSetAllocateInfo = vk::DescriptorSetAllocateInfo()
+    .setDescriptorPool(descriptorPool_)
+    .setSetLayouts(descriptorSetLayout);
+  const auto descriptorSet = device_.allocateDescriptorSets(descriptorSetAllocateInfo)[0];
+
+  std::vector<vk::DescriptorBufferInfo> bufferInfos(3);
+  bufferInfos[0]
+    .setBuffer(buffers[0])
+    .setOffset(0)
+    .setRange(VK_WHOLE_SIZE);
+
+  bufferInfos[1]
+    .setBuffer(buffers[1])
+    .setOffset(0)
+    .setRange(VK_WHOLE_SIZE);
+
+  bufferInfos[2]
+    .setBuffer(buffers[2])
+    .setOffset(0)
+    .setRange(VK_WHOLE_SIZE);
+
+  std::vector<vk::WriteDescriptorSet> writes(3);
+  writes[0]
+    .setDstBinding(0)
+    .setDstSet(descriptorSet)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1)
+    .setBufferInfo(bufferInfos[0]);
+
+  writes[1]
+    .setDstBinding(1)
+    .setDstSet(descriptorSet)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1)
+    .setBufferInfo(bufferInfos[1]);
+
+  writes[2]
+    .setDstBinding(2)
+    .setDstSet(descriptorSet)
+    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+    .setDescriptorCount(1)
+    .setBufferInfo(bufferInfos[2]);
+
+  device_.updateDescriptorSets(writes, {});
+
+  descriptorSets_.push_back(descriptorSet);
+}
+
+void Engine::runComputeShader(int computeShaderId, int n, int bitOffset, int scanOffset)
+{
+  constexpr auto BLOCK_SIZE = 256;
+  constexpr auto RADIX_SIZE = 256;
+  const auto groupSize = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+  const auto allocateInfo = vk::CommandBufferAllocateInfo()
+    .setLevel(vk::CommandBufferLevel::ePrimary)
+    .setCommandPool(transientCommandPool_)
+    .setCommandBufferCount(1);
+
+  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
+
+  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+  cb.bindDescriptorSets(vk::PipelineBindPoint::eCompute, computePipelines_[computeShaderId].pipelineLayout, 0, { descriptorSets_[0] }, {});
+  cb.bindPipeline(vk::PipelineBindPoint::eCompute, computePipelines_[computeShaderId].pipeline);
+  cb.pushConstants<int>(computePipelines_[computeShaderId].pipelineLayout, vk::ShaderStageFlagBits::eCompute, 0, n);
+  cb.pushConstants<int>(computePipelines_[computeShaderId].pipelineLayout, vk::ShaderStageFlagBits::eCompute, sizeof(n), bitOffset);
+  cb.pushConstants<int>(computePipelines_[computeShaderId].pipelineLayout, vk::ShaderStageFlagBits::eCompute, sizeof(n) + sizeof(bitOffset), scanOffset);
+  cb.dispatch(groupSize, 1, 1);
+  cb.end();
+
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
+  queue_.submit(submit, transferFence_);
+
+  // TODO: don't wait for compute job completion
+  device_.waitForFences(transferFence_, true, UINT64_MAX);
+  device_.resetFences(transferFence_);
+  device_.freeCommandBuffers(transientCommandPool_, cb);
 }
 
 void Engine::createSwapchain(const window::Window& window)
@@ -308,6 +509,27 @@ void Engine::destroyCommandPool()
   device_.destroyCommandPool(transientCommandPool_);
 }
 
+void Engine::createDescriptorPool()
+{
+  constexpr uint32_t maxSets = 256;
+  constexpr uint32_t maxTypeCount = 256;
+
+  std::vector<vk::DescriptorPoolSize> poolSizes = {
+    {vk::DescriptorType::eStorageBuffer, maxTypeCount},
+  };
+
+  const auto descriptorPoolInfo = vk::DescriptorPoolCreateInfo()
+    .setPoolSizes(poolSizes)
+    .setMaxSets(maxSets);
+
+  descriptorPool_ = device_.createDescriptorPool(descriptorPoolInfo);
+}
+
+void Engine::destroyDescriptorPool()
+{
+  device_.destroyDescriptorPool(descriptorPool_);
+}
+
 void Engine::createInstance()
 {
   std::vector<const char*> layers;
@@ -377,6 +599,17 @@ void Engine::selectSuitablePhysicalDevice()
 {
   // TODO: choose among candidates, now assuming one GPU available
   physicalDevice_ = instance_.enumeratePhysicalDevices()[0];
+
+  // Print physical device info
+  const auto subgroupProperties = physicalDevice_.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceSubgroupProperties>()
+    .get<vk::PhysicalDeviceSubgroupProperties>();
+
+  std::cout << "Subgroup properties:" << std::endl
+    << "  subgroup size                : " << subgroupProperties.subgroupSize << std::endl
+    << "  supported stages             : " << vk::to_string(subgroupProperties.supportedStages) << std::endl
+    << "  supported operations         : " << vk::to_string(subgroupProperties.supportedOperations) << std::endl
+    << "  quad operations in all stages: " << subgroupProperties.quadOperationsInAllStages << std::endl
+    << std::endl;
 }
 
 void Engine::createDevice()

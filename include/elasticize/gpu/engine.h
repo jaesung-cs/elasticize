@@ -36,10 +36,28 @@ public:
 
   void attachWindow(const window::Window& window);
 
+  void addComputeShader(const std::string& filepath);
+
+  template <typename T, typename U, typename V>
+  void addDescriptorSet(const Buffer<T>& arrayBuffer, const Buffer<U>& counterBuffer, const Buffer<V>& outBuffer)
+  {
+    addDescriptorSet(arrayBuffer.buffer(), counterBuffer.buffer(), outBuffer.buffer());
+  }
+
+  void runComputeShader(int computeShaderId, int n, int bitOffset, int scanOffset = 0);
+
+  template <typename T>
+  void copyBuffer(const Buffer<T>& srcBuffer, const Buffer<T>& dstBuffer)
+  {
+    copyBuffer(srcBuffer.buffer(), dstBuffer.buffer(), sizeof(T) * srcBuffer.size());
+  }
+
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
   void destroyBuffer(vk::Buffer buffer);
+
+  void addDescriptorSet(vk::Buffer arrayBuffer, vk::Buffer counterBuffer, vk::Buffer outBuffer);
 
   template <typename T>
   void transferToGpu(const std::vector<T>& data, vk::Buffer buffer)
@@ -56,6 +74,8 @@ private:
   }
 
   void transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer);
+
+  void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize byteSize);
 
 private:
   void createInstance();
@@ -74,6 +94,9 @@ private:
   void createCommandPool();
   void destroyCommandPool();
 
+  void createDescriptorPool();
+  void destroyDescriptorPool();
+
 private:
   Options options_;
   vk::Instance instance_;
@@ -82,7 +105,7 @@ private:
   vk::PhysicalDevice physicalDevice_;
   vk::Device device_;
   vk::Queue queue_;
-  uint32_t queueIndex_;
+  uint32_t queueIndex_ = 0;
 
   // Memory pool
   uint32_t deviceIndex_ = 0;
@@ -100,6 +123,21 @@ private:
   vk::SurfaceKHR surface_;
   vk::SwapchainCreateInfoKHR swapchainInfo_;
   vk::SwapchainKHR swapchain_;
+
+  // Descriptor pool
+  vk::DescriptorPool descriptorPool_;
+
+  // Compute pipelines
+  struct ComputePipeline
+  {
+    vk::DescriptorSetLayout descriptorSetLayout;
+    vk::PipelineLayout pipelineLayout;
+    vk::Pipeline pipeline;
+  };
+  std::vector<ComputePipeline> computePipelines_;
+
+  // Descriptor sets
+  std::vector<vk::DescriptorSet> descriptorSets_;
 };
 }
 }

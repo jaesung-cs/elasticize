@@ -1,0 +1,57 @@
+#version 450
+
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+#extension GL_KHR_shader_subgroup_vote : enable
+
+const int BLOCK_SIZE = 256;
+const int RADIX_BITS = 8;
+const int RADIX_SIZE = 1 << 8;
+
+layout (local_size_x = BLOCK_SIZE) in;
+
+layout (push_constant) uniform SortInfoUbo {
+  uint array_size;
+  int bit_offset;
+  uint scan_offset;
+};
+
+struct KeyValue {
+  uint key;
+  uint value;
+};
+
+layout (std430, binding = 0) buffer ArraySsbo {
+  KeyValue data[];
+} array;
+
+layout (std430, binding = 1) buffer CounterSsbo {
+  uint data[]; // Prefix sum for each workgroup
+} counter;
+
+shared uint local_counter[RADIX_SIZE];
+
+void count(uint item) {
+  const uint key = bitfieldExtract(item, bit_offset, RADIX_BITS);
+
+  // Add to workgroup local counter
+  atomicAdd(local_counter[key], 1);
+}
+
+void main() {
+  // Workgroup size is equal to radix size
+  local_counter[gl_LocalInvocationID.x] = 0;
+  barrier();
+
+  // Key of current item
+  const bool in_range = gl_GlobalInvocationID.x < array_size;
+  if (subgroupAll(in_range))
+    count(array.data[gl_GlobalInvocationID.x].key);
+  else if (in_range)
+    count(array.data[gl_GlobalInvocationID.x].key);
+  barrier();
+
+  // Update counter
+  counter.data[gl_LocalInvocationID.x * gl_NumWorkGroups.x + gl_WorkGroupID.x] = local_counter[gl_LocalInvocationID.x];
+}

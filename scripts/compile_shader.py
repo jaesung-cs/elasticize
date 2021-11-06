@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     if source_date > target_date:
       print(f'compiling {filename}:')
-      if os.system(f'glslc.exe {filename} -o {target_filename}') != 0:
+      if os.system(f'glslc.exe {filename} -o {target_filename} --target-env=vulkan1.2') != 0:
         # delete previously compiled spv file
         print(f'failed to compile shader: {filename}')
         if os.path.exists(f'{filename}.spv'):
