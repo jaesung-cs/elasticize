@@ -144,6 +144,34 @@ void Engine::transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer)
   std::memcpy(data, stagingBufferMap_, size);
 }
 
+void Engine::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize byteSize)
+{
+  // To target buffer
+  const auto region = vk::BufferCopy()
+    .setSrcOffset(0)
+    .setDstOffset(0)
+    .setSize(byteSize);
+
+  const auto allocateInfo = vk::CommandBufferAllocateInfo()
+    .setLevel(vk::CommandBufferLevel::ePrimary)
+    .setCommandPool(transientCommandPool_)
+    .setCommandBufferCount(1);
+
+  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
+
+  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+  cb.copyBuffer(srcBuffer, dstBuffer, region);
+  cb.end();
+
+  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
+  queue_.submit(submit, transferFence_);
+
+  // TODO: don't wait for transfer completion
+  device_.waitForFences(transferFence_, true, UINT64_MAX);
+  device_.resetFences(transferFence_);
+  device_.freeCommandBuffers(transientCommandPool_, cb);
+}
+
 void Engine::attachWindow(const window::Window& window)
 {
   destroySwapchain();

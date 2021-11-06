@@ -46,6 +46,12 @@ public:
 
   void runComputeShader(int computeShaderId, int n, int bitOffset, int scanOffset = 0);
 
+  template <typename T>
+  void copyBuffer(const Buffer<T>& srcBuffer, const Buffer<T>& dstBuffer)
+  {
+    copyBuffer(srcBuffer.buffer(), dstBuffer.buffer(), sizeof(T) * srcBuffer.size());
+  }
+
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
@@ -68,6 +74,8 @@ private:
   }
 
   void transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer);
+
+  void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize byteSize);
 
 private:
   void createInstance();
