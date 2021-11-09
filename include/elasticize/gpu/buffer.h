@@ -17,9 +17,13 @@ public:
   Buffer(Engine& engine, uint64_t count);
   ~Buffer();
 
+  operator vk::Buffer() const noexcept { return buffer_; }
+
   auto& operator [] (uint64_t index) { return data_[index]; }
   const auto& operator [] (uint64_t index) const { return data_[index]; }
 
+  T* data() { return data_.data(); }
+  const T* data() const { return data_.data(); }
   auto size() const { return data_.size(); }
 
   void toGpu();

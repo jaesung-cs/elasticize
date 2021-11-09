@@ -12,7 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\elasticize\elasticize.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\compute_shader.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\descriptor_set.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\descriptor_set_layout.cc" />
     <ClCompile Include="..\..\src\elasticize\gpu\engine.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\execution.cc" />
     <ClCompile Include="..\..\src\elasticize\utils\timer.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window_manager.cc" />
@@ -20,7 +24,11 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\elasticize\elasticize.h" />
     <ClInclude Include="..\..\include\elasticize\gpu\buffer.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\compute_shader.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\descriptor_set.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\descriptor_set_layout.h" />
     <ClInclude Include="..\..\include\elasticize\gpu\engine.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\execution.h" />
     <ClInclude Include="..\..\include\elasticize\utils\timer.h" />
     <ClInclude Include="..\..\include\elasticize\window\window.h" />
     <ClInclude Include="..\..\include\elasticize\window\window_manager.h" />

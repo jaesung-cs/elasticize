@@ -320,7 +320,6 @@ void Engine::addDescriptorSet(vk::Buffer arrayBuffer, vk::Buffer counterBuffer, 
 void Engine::runComputeShader(int computeShaderId, int n, int bitOffset, int scanOffset)
 {
   constexpr auto BLOCK_SIZE = 256;
-  constexpr auto RADIX_SIZE = 256;
   const auto groupSize = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
   const auto allocateInfo = vk::CommandBufferAllocateInfo()
@@ -497,7 +496,7 @@ void Engine::createCommandPool()
 {
   const auto commandPoolInfo = vk::CommandPoolCreateInfo()
     .setQueueFamilyIndex(queueIndex_)
-    .setFlags(vk::CommandPoolCreateFlagBits::eTransient);
+    .setFlags(vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 
   transientCommandPool_ = device_.createCommandPool(commandPoolInfo);
   transferFence_ = device_.createFence({});
@@ -519,6 +518,7 @@ void Engine::createDescriptorPool()
   };
 
   const auto descriptorPoolInfo = vk::DescriptorPoolCreateInfo()
+    .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
     .setPoolSizes(poolSizes)
     .setMaxSets(maxSets);
 

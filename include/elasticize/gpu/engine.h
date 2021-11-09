@@ -20,6 +20,8 @@ class Engine
   template <typename T>
   friend class Buffer;
 
+  friend class Execution;
+
 public:
   struct Options
   {
@@ -33,6 +35,11 @@ public:
   Engine() = delete;
   explicit Engine(Options options);
   ~Engine();
+
+  auto queue() const noexcept { return queue_; }
+  auto device() const noexcept { return device_; }
+  auto transientCommandPool() const noexcept { return transientCommandPool_; }
+  auto descriptorPool() const noexcept { return descriptorPool_; }
 
   void attachWindow(const window::Window& window);
 

@@ -1,12 +1,15 @@
-#include <elasticize/gpu/engine.h>
-#include <elasticize/gpu/buffer.h>
-#include <elasticize/utils/timer.h>
-
 #include <iostream>
 #include <random>
 #include <string>
 #include <iomanip>
 #include <execution>
+
+#include <elasticize/gpu/engine.h>
+#include <elasticize/gpu/buffer.h>
+#include <elasticize/gpu/descriptor_set_layout.h>
+#include <elasticize/gpu/descriptor_set.h>
+#include <elasticize/gpu/compute_shader.h>
+#include <elasticize/utils/timer.h>
 
 int main()
 {
@@ -68,6 +71,18 @@ int main()
       counterBuffer[i] = 0;
 
     engine.addDescriptorSet(arrayBuffer, counterBuffer, outBuffer);
+
+    elastic::gpu::DescriptorSetLayout descriptorSetLayout(engine, 3);
+    elastic::gpu::DescriptorSet descriptorSet(engine, descriptorSetLayout, {
+      arrayBuffer,
+      counterBuffer,
+      outBuffer,
+      });
+
+    elastic::gpu::ComputeShader countShader(engine, shaderDirpath + "\\count.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanForwardShader(engine, shaderDirpath + "\\scan_forward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanBackwardShader(engine, shaderDirpath + "\\scan_backward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader distributeShader(engine, shaderDirpath + "\\distribute.comp.spv", descriptorSetLayout, {});
 
     // Move input from CPU to GPU
     std::cout << "To GPU" << std::endl;

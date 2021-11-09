@@ -52,6 +52,18 @@
     <ClCompile Include="..\..\src\elasticize\utils\timer.cc">
       <Filter>src\elasticize\utils</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\execution.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\descriptor_set.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\descriptor_set_layout.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\compute_shader.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\elasticize\elasticize.h">
@@ -71,6 +83,18 @@
     </ClInclude>
     <ClInclude Include="..\..\include\elasticize\utils\timer.h">
       <Filter>include\elasticize\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\execution.h">
+      <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\compute_shader.h">
+      <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\descriptor_set.h">
+      <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\descriptor_set_layout.h">
+      <Filter>include\elasticize\gpu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
