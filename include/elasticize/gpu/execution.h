@@ -40,15 +40,22 @@ public:
     return copy(srcBuffer, dstBuffer, sizeof(T) * srcBuffer.size());
   }
 
-  Execution& runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX);
+  template <typename T>
+  Execution& runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX,
+    const T& pushConstants)
+  {
+    return runComputeShader(computeShader, descriptorSet, groupCountX, &pushConstants, sizeof(T));
+  }
+
   Execution& barrier();
 
   void run();
 
 private:
-  Execution& toGpu(vk::Buffer buffer, void* data, vk::DeviceSize size);
+  Execution& toGpu(vk::Buffer buffer, const void* data, vk::DeviceSize size);
   Execution& fromGpu(vk::Buffer buffer, void* data, vk::DeviceSize size);
   Execution& copy(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
+  Execution& runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX, const void* pushConstants, uint32_t size);
 
   Engine& engine_;
   vk::Device device_;

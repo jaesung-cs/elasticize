@@ -18,6 +18,7 @@ ComputeShader::ComputeShader(Engine& engine,
   auto device = engine_.device();
 
   // Pipeline layout
+  // TODO: push constants
   std::vector<vk::PushConstantRange> pushConstantRange(1);
   pushConstantRange[0]
     .setStageFlags(vk::ShaderStageFlagBits::eCompute)

@@ -1,5 +1,7 @@
 #include <elasticize/gpu/execution.h>
 
+#include <iostream>
+
 #include <elasticize/gpu/engine.h>
 #include <elasticize/gpu/compute_shader.h>
 #include <elasticize/gpu/descriptor_set.h>
@@ -15,19 +17,24 @@ Execution::Execution(Engine& engine)
   device_ = engine.device();
   transientCommandPool_ = engine.transientCommandPool();
 
+  fence_ = device_.createFence({});
+
   const auto allocateInfo = vk::CommandBufferAllocateInfo()
     .setLevel(vk::CommandBufferLevel::ePrimary)
     .setCommandPool(transientCommandPool_)
     .setCommandBufferCount(1);
   commandBuffer_ = device_.allocateCommandBuffers(allocateInfo)[0];
+
+  commandBuffer_.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 }
 
 Execution::~Execution()
 {
   device_.freeCommandBuffers(transientCommandPool_, commandBuffer_);
+  device_.destroyFence(fence_);
 }
 
-Execution& Execution::toGpu(vk::Buffer buffer, void* data, vk::DeviceSize size)
+Execution& Execution::toGpu(vk::Buffer buffer, const void* data, vk::DeviceSize size)
 {
   auto stagingBuffer = engine_.stagingBuffer_;
 
@@ -78,11 +85,11 @@ Execution& Execution::copy(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::Devic
   return *this;
 }
 
-Execution& Execution::runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX)
+Execution& Execution::runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX, const void* pushConstants, uint32_t size)
 {
   commandBuffer_.bindDescriptorSets(vk::PipelineBindPoint::eCompute, computeShader.pipelineLayout(), 0u, static_cast<vk::DescriptorSet>(descriptorSet), {});
   commandBuffer_.bindPipeline(vk::PipelineBindPoint::eCompute, computeShader.pipeline());
-  commandBuffer_.pushConstants<uint32_t>(computeShader.pipelineLayout(), vk::ShaderStageFlagBits::eCompute, 0u, 0u);
+  commandBuffer_.pushConstants(computeShader.pipelineLayout(), vk::ShaderStageFlagBits::eCompute, 0u, size, pushConstants);
   commandBuffer_.dispatch(groupCountX, 1, 1);
 
   return *this;
@@ -90,20 +97,24 @@ Execution& Execution::runComputeShader(ComputeShader& computeShader, DescriptorS
 
 Execution& Execution::barrier()
 {
-  const auto memoryBarrier = vk::MemoryBarrier2KHR()
-    .setSrcStageMask(vk::PipelineStageFlagBits2KHR::eComputeShader)
-    .setSrcAccessMask(vk::AccessFlagBits2KHR::eShaderStorageWrite)
-    .setDstStageMask(vk::PipelineStageFlagBits2KHR::eComputeShader)
-    .setSrcAccessMask(vk::AccessFlagBits2KHR::eShaderStorageRead);
-  const auto dependency = vk::DependencyInfoKHR()
-    .setMemoryBarriers(memoryBarrier);
-  commandBuffer_.pipelineBarrier2KHR(dependency);
+  // TODO: separate shader and transfer read/write?
+  const auto memoryBarrier = vk::MemoryBarrier()
+    .setSrcAccessMask(vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eTransferWrite)
+    .setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eTransferRead);
+
+  commandBuffer_.pipelineBarrier(
+    vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eTransfer,
+    vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eTransfer,
+    {},
+    memoryBarrier, {}, {});
 
   return *this;
 }
 
 void Execution::run()
 {
+  commandBuffer_.end();
+
   const auto submit = vk::SubmitInfo().setCommandBuffers(commandBuffer_);
   queue_.submit(submit, fence_);
 
