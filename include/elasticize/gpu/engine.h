@@ -20,6 +20,8 @@ class Engine
   template <typename T>
   friend class Buffer;
 
+  friend class Execution;
+
 public:
   struct Options
   {
@@ -34,30 +36,17 @@ public:
   explicit Engine(Options options);
   ~Engine();
 
+  auto queue() const noexcept { return queue_; }
+  auto device() const noexcept { return device_; }
+  auto transientCommandPool() const noexcept { return transientCommandPool_; }
+  auto descriptorPool() const noexcept { return descriptorPool_; }
+
   void attachWindow(const window::Window& window);
-
-  void addComputeShader(const std::string& filepath);
-
-  template <typename T, typename U, typename V>
-  void addDescriptorSet(const Buffer<T>& arrayBuffer, const Buffer<U>& counterBuffer, const Buffer<V>& outBuffer)
-  {
-    addDescriptorSet(arrayBuffer.buffer(), counterBuffer.buffer(), outBuffer.buffer());
-  }
-
-  void runComputeShader(int computeShaderId, int n, int bitOffset, int scanOffset = 0);
-
-  template <typename T>
-  void copyBuffer(const Buffer<T>& srcBuffer, const Buffer<T>& dstBuffer)
-  {
-    copyBuffer(srcBuffer.buffer(), dstBuffer.buffer(), sizeof(T) * srcBuffer.size());
-  }
 
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
   void destroyBuffer(vk::Buffer buffer);
-
-  void addDescriptorSet(vk::Buffer arrayBuffer, vk::Buffer counterBuffer, vk::Buffer outBuffer);
 
   template <typename T>
   void transferToGpu(const std::vector<T>& data, vk::Buffer buffer)

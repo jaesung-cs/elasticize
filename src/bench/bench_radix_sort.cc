@@ -1,12 +1,16 @@
-#include <elasticize/gpu/engine.h>
-#include <elasticize/gpu/buffer.h>
-#include <elasticize/utils/timer.h>
-
 #include <iostream>
 #include <random>
 #include <string>
 #include <iomanip>
 #include <execution>
+
+#include <elasticize/gpu/engine.h>
+#include <elasticize/gpu/buffer.h>
+#include <elasticize/gpu/descriptor_set_layout.h>
+#include <elasticize/gpu/descriptor_set.h>
+#include <elasticize/gpu/compute_shader.h>
+#include <elasticize/gpu/execution.h>
+#include <elasticize/utils/timer.h>
 
 int main()
 {
@@ -15,15 +19,10 @@ int main()
     elastic::gpu::Engine::Options options;
     options.headless = true;
     options.validationLayer = true;
+    options.memoryPoolSize = 256 * 1024 * 1024; // 256MB
     elastic::gpu::Engine engine(options);
 
     std::cout << "Engine started!" << std::endl;
-
-    const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
-    engine.addComputeShader(shaderDirpath + "\\count.comp.spv");
-    engine.addComputeShader(shaderDirpath + "\\scan_forward.comp.spv");
-    engine.addComputeShader(shaderDirpath + "\\scan_backward.comp.spv");
-    engine.addComputeShader(shaderDirpath + "\\distribute.comp.spv");
 
     constexpr int n = 1000000;
     constexpr int keyBits = 30; // for 10-bit each component morton code
@@ -67,69 +66,88 @@ int main()
     for (int i = 0; i < counterBuffer.size(); i++)
       counterBuffer[i] = 0;
 
-    engine.addDescriptorSet(arrayBuffer, counterBuffer, outBuffer);
+    elastic::gpu::DescriptorSetLayout descriptorSetLayout(engine, 3);
+    elastic::gpu::DescriptorSet descriptorSet(engine, descriptorSetLayout, {
+      arrayBuffer,
+      counterBuffer,
+      outBuffer,
+      });
 
-    // Move input from CPU to GPU
-    std::cout << "To GPU" << std::endl;
-    elastic::utils::Timer toGpuTimer;
-    arrayBuffer.toGpu();
-    std::cout << "Elapsed: " << toGpuTimer.elapsed() << std::endl;
+    const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
+    elastic::gpu::ComputeShader countShader(engine, shaderDirpath + "\\count.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanForwardShader(engine, shaderDirpath + "\\scan_forward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanBackwardShader(engine, shaderDirpath + "\\scan_backward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader distributeShader(engine, shaderDirpath + "\\distribute.comp.spv", descriptorSetLayout, {});
+
+    // Move to GPU
+    elastic::gpu::Execution(engine).toGpu(arrayBuffer).run();
+
+    // Radix sort
+    elastic::gpu::Execution execution(engine);
+    struct SortInfoUbo
+    {
+      uint32_t array_size;
+      int32_t bit_offset;
+      uint32_t scan_offset;
+    };
+    SortInfoUbo sortInfo;
 
     for (int bitOffset = 0; bitOffset < keyBits; bitOffset += RADIX_BITS)
     {
-      // Count job in GPU
-      std::cout << "Count in GPU" << std::endl;
-      elastic::utils::Timer gpuCountTimer;
-      engine.runComputeShader(0, n, bitOffset);
-      std::cout << "Elapsed: " << gpuCountTimer.elapsed() << std::endl;
+      sortInfo = { n, bitOffset, 0 };
+      execution
+        .runComputeShader(countShader, descriptorSet, (n + BLOCK_SIZE - 1) / BLOCK_SIZE, sortInfo)
+        .barrier();
 
-      // Scan forward job in GPU
-      std::cout << "Scan forward in GPU" << std::endl;
-      elastic::utils::Timer gpuScanTimer;
-      uint32_t scanOffset = 0;
-      simdSize = alignedSize;
-
+      // Scan forward
       struct Phase
       {
         uint32_t simdSize;
         uint32_t scanOffset;
       };
       std::vector<Phase> phases;
+      uint32_t scanOffset = 0;
+      simdSize = alignedSize;
       do
       {
-        std::cout << "array size, scan offset: " << simdSize << ", " << scanOffset << std::endl;
         phases.push_back(Phase{ simdSize, scanOffset });
-        engine.runComputeShader(1, simdSize, bitOffset, scanOffset);
+        sortInfo = { simdSize, bitOffset, scanOffset };
+        execution
+          .runComputeShader(scanForwardShader, descriptorSet, (simdSize + BLOCK_SIZE - 1) / BLOCK_SIZE, sortInfo)
+          .barrier();
         scanOffset += simdSize;
         simdSize = (simdSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
       } while (simdSize > 1);
-      std::cout << "Elapsed: " << gpuScanTimer.elapsed() << std::endl;
 
-      // Scan backward job in GPU
-      std::cout << "Scan backward in GPU" << std::endl;
-      elastic::utils::Timer gpuScanBackwardTimer;
+      // Scan backward
       for (int i = phases.size() - 1; i >= 0; i--)
       {
         const auto& phase = phases[i];
-        engine.runComputeShader(2, phase.simdSize, bitOffset, phase.scanOffset);
+        sortInfo = { phase.simdSize, bitOffset, phase.scanOffset };
+        execution
+          .runComputeShader(scanBackwardShader, descriptorSet, (phase.simdSize + BLOCK_SIZE - 1) / BLOCK_SIZE, sortInfo)
+          .barrier();
       }
-      std::cout << "Elapsed: " << gpuScanBackwardTimer.elapsed() << std::endl;
 
       // Now prefix sum of counter[key][block_index], meaning start offset of each group
-      std::cout << "Distribute in GPU" << std::endl;
-      elastic::utils::Timer gpuDistributeTimer;
-      engine.runComputeShader(3, n, bitOffset);
-      std::cout << "Elapsed: " << gpuDistributeTimer.elapsed() << std::endl;
+      sortInfo = { n, bitOffset, 0 };
+      execution
+        .runComputeShader(distributeShader, descriptorSet, (n + BLOCK_SIZE - 1) / BLOCK_SIZE, sortInfo)
+        .barrier();
 
       // Copy to input buffer
-      engine.copyBuffer(outBuffer, arrayBuffer);
+      execution
+        .copy(outBuffer, arrayBuffer)
+        .barrier();
     }
-    
-    // Move result from GPU to CPU
-    std::cout << "From GPU" << std::endl;
-    elastic::utils::Timer fromGpuTimer;
-    arrayBuffer.fromGpu();
-    std::cout << "Elapsed: " << fromGpuTimer.elapsed() << std::endl;
+
+    std::cout << "GPU radix sort" << std::endl;
+    elastic::utils::Timer gpuTimer;
+    execution.run();
+    std::cout << "Elapsed: " << gpuTimer.elapsed() << std::endl;
+
+    // From GPU
+    elastic::gpu::Execution(engine).fromGpu(arrayBuffer).run();
 
     // CPU radix sort
     std::cout << "CPU radix sort" << std::endl;
