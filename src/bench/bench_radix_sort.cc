@@ -19,6 +19,7 @@ int main()
     elastic::gpu::Engine::Options options;
     options.headless = true;
     options.validationLayer = true;
+    options.memoryPoolSize = 256 * 1024 * 1024; // 256MB
     elastic::gpu::Engine engine(options);
 
     std::cout << "Engine started!" << std::endl;
