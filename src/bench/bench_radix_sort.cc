@@ -120,7 +120,7 @@ int main()
       } while (simdSize > 1);
 
       // Scan backward
-      for (int i = phases.size() - 1; i >= 0; i--)
+      for (int i = static_cast<int>(phases.size()) - 1; i >= 0; i--)
       {
         const auto& phase = phases[i];
         sortInfo = { phase.simdSize, bitOffset, phase.scanOffset };

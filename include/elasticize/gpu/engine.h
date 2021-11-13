@@ -15,12 +15,18 @@ namespace gpu
 template <typename T>
 class Buffer;
 
+class Execution;
+class GraphicsShader;
+class ComputeShader;
+
 class Engine
 {
   template <typename T>
   friend class Buffer;
 
   friend class Execution;
+  friend class GraphicsShader;
+  friend class ComputeShader;
 
 public:
   struct Options
@@ -49,23 +55,7 @@ private:
   vk::Buffer createBuffer(vk::DeviceSize size);
   void destroyBuffer(vk::Buffer buffer);
 
-  template <typename T>
-  void transferToGpu(const std::vector<T>& data, vk::Buffer buffer)
-  {
-    transferToGpu(data.data(), sizeof(T) * data.size(), buffer);
-  }
-
-  void transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buffer);
-
-  template <typename T>
-  void transferFromGpu(std::vector<T>& data, vk::Buffer buffer)
-  {
-    transferFromGpu(data.data(), sizeof(T) * data.size(), buffer);
-  }
-
-  void transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer);
-
-  void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize byteSize);
+  vk::ShaderModule createShaderModule(const std::string& filepath);
 
 private:
   void createInstance();

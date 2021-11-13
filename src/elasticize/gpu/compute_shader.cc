@@ -34,23 +34,7 @@ ComputeShader::ComputeShader(Engine& engine,
   pipelineLayout_ = device.createPipelineLayout(pipelineLayoutInfo);
 
   // Pipeline
-  std::ifstream file(filepath, std::ios::ate | std::ios::binary);
-  if (!file.is_open())
-    throw std::runtime_error("Failed to open file: " + filepath);
-
-  size_t fileSize = (size_t)file.tellg();
-  std::vector<char> buffer(fileSize);
-  file.seekg(0);
-  file.read(buffer.data(), fileSize);
-  file.close();
-
-  std::vector<uint32_t> code;
-  auto* intPtr = reinterpret_cast<uint32_t*>(buffer.data());
-  for (int i = 0; i < fileSize / 4; i++)
-    code.push_back(intPtr[i]);
-
-  const auto shaderModuleInfo = vk::ShaderModuleCreateInfo().setCode(code);
-  const auto module = device.createShaderModule(shaderModuleInfo);
+  const auto module = engine.createShaderModule(filepath);
 
   const auto stage = vk::PipelineShaderStageCreateInfo()
     .setStage(vk::ShaderStageFlagBits::eCompute)

@@ -13,7 +13,7 @@ DescriptorSetLayout::DescriptorSetLayout(Engine& engine, uint32_t storageBufferC
 
   // Descriptor set layout
   std::vector<vk::DescriptorSetLayoutBinding> bindings(storageBufferCount);
-  for (int i = 0; i < storageBufferCount; i++)
+  for (uint32_t i = 0; i < storageBufferCount; i++)
   {
     bindings[i]
       .setBinding(i)

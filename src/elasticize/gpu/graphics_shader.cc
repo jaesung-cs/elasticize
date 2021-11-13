@@ -9,33 +9,6 @@ namespace elastic
 {
 namespace gpu
 {
-namespace
-{
-vk::ShaderModule createShaderModule(vk::Device device, const std::string& filepath)
-{
-  // Pipeline
-  std::ifstream file(filepath, std::ios::ate | std::ios::binary);
-  if (!file.is_open())
-    throw std::runtime_error("Failed to open file: " + filepath);
-
-  size_t fileSize = (size_t)file.tellg();
-  std::vector<char> buffer(fileSize);
-  file.seekg(0);
-  file.read(buffer.data(), fileSize);
-  file.close();
-
-  std::vector<uint32_t> code;
-  auto* intPtr = reinterpret_cast<uint32_t*>(buffer.data());
-  for (int i = 0; i < fileSize / 4; i++)
-    code.push_back(intPtr[i]);
-
-  const auto shaderModuleInfo = vk::ShaderModuleCreateInfo().setCode(code);
-  const auto module = device.createShaderModule(shaderModuleInfo);
-
-  return module;
-}
-}
-
 GraphicsShader::GraphicsShader(Engine& engine, const Options& options)
   : engine_(engine)
 {
@@ -131,7 +104,7 @@ GraphicsShader::GraphicsShader(Engine& engine, const Options& options)
   for (const auto& shader : options.shaders)
   {
     stages.push_back(vk::PipelineShaderStageCreateInfo()
-      .setModule(createShaderModule(device, shader.filepath))
+      .setModule(engine.createShaderModule(shader.filepath))
       .setStage(shader.stage)
       .setPName("main"));
   }

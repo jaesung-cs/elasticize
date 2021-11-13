@@ -84,94 +84,27 @@ void Engine::destroyBuffer(vk::Buffer buffer)
   device_.destroyBuffer(buffer);
 }
 
-void Engine::transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buffer)
+vk::ShaderModule Engine::createShaderModule(const std::string& filepath)
 {
-  // To staging buffer
-  std::memcpy(stagingBufferMap_, data, size);
+  std::ifstream file(filepath, std::ios::ate | std::ios::binary);
+  if (!file.is_open())
+    throw std::runtime_error("Failed to open file: " + filepath);
 
-  // To target buffer
-  const auto region = vk::BufferCopy()
-    .setSrcOffset(0)
-    .setDstOffset(0)
-    .setSize(size);
+  size_t fileSize = (size_t)file.tellg();
+  std::vector<char> buffer(fileSize);
+  file.seekg(0);
+  file.read(buffer.data(), fileSize);
+  file.close();
 
-  const auto allocateInfo = vk::CommandBufferAllocateInfo()
-    .setLevel(vk::CommandBufferLevel::ePrimary)
-    .setCommandPool(transientCommandPool_)
-    .setCommandBufferCount(1);
+  std::vector<uint32_t> code;
+  auto* intPtr = reinterpret_cast<uint32_t*>(buffer.data());
+  for (int i = 0; i < fileSize / 4; i++)
+    code.push_back(intPtr[i]);
 
-  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
+  const auto shaderModuleInfo = vk::ShaderModuleCreateInfo().setCode(code);
+  const auto module = device_.createShaderModule(shaderModuleInfo);
 
-  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-  cb.copyBuffer(stagingBuffer_, buffer, region);
-  cb.end();
-
-  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
-  queue_.submit(submit, transferFence_);
-
-  // TODO: don't wait for transfer completion
-  device_.waitForFences(transferFence_, true, UINT64_MAX);
-  device_.resetFences(transferFence_);
-  device_.freeCommandBuffers(transientCommandPool_, cb);
-}
-
-void Engine::transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer)
-{
-  // To target buffer
-  const auto region = vk::BufferCopy()
-    .setSrcOffset(0)
-    .setDstOffset(0)
-    .setSize(size);
-
-  const auto allocateInfo = vk::CommandBufferAllocateInfo()
-    .setLevel(vk::CommandBufferLevel::ePrimary)
-    .setCommandPool(transientCommandPool_)
-    .setCommandBufferCount(1);
-
-  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
-
-  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-  cb.copyBuffer(buffer, stagingBuffer_, region);
-  cb.end();
-
-  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
-  queue_.submit(submit, transferFence_);
-
-  // TODO: don't wait for transfer completion
-  device_.waitForFences(transferFence_, true, UINT64_MAX);
-  device_.resetFences(transferFence_);
-  device_.freeCommandBuffers(transientCommandPool_, cb);
-
-  // To staging buffer
-  std::memcpy(data, stagingBufferMap_, size);
-}
-
-void Engine::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize byteSize)
-{
-  // To target buffer
-  const auto region = vk::BufferCopy()
-    .setSrcOffset(0)
-    .setDstOffset(0)
-    .setSize(byteSize);
-
-  const auto allocateInfo = vk::CommandBufferAllocateInfo()
-    .setLevel(vk::CommandBufferLevel::ePrimary)
-    .setCommandPool(transientCommandPool_)
-    .setCommandBufferCount(1);
-
-  const auto cb = device_.allocateCommandBuffers(allocateInfo)[0];
-
-  cb.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-  cb.copyBuffer(srcBuffer, dstBuffer, region);
-  cb.end();
-
-  const auto submit = vk::SubmitInfo().setCommandBuffers(cb);
-  queue_.submit(submit, transferFence_);
-
-  // TODO: don't wait for transfer completion
-  device_.waitForFences(transferFence_, true, UINT64_MAX);
-  device_.resetFences(transferFence_);
-  device_.freeCommandBuffers(transientCommandPool_, cb);
+  return module;
 }
 
 void Engine::attachWindow(const window::Window& window)
