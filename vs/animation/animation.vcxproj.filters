@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{a6fff633-50d4-4b48-851a-43a4426e4e22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\example">
+      <UniqueIdentifier>{91bfff89-b9aa-47e0-a4ba-e73b69dc2f83}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\example\animation.cc">
+      <Filter>src\example</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
