@@ -40,6 +40,7 @@ public:
     std::vector<Shader> shaders;
     std::vector<Binding> bindings;
     std::vector<Attribute> attributes;
+    vk::Format imageFormat;
   };
 
 public:

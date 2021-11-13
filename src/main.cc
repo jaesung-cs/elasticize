@@ -19,7 +19,6 @@ int main()
     options.validationLayer = true;
 
     elastic::gpu::Engine engine(options);
-    engine.attachWindow(window);
 
     while (!window.shouldClose())
     {

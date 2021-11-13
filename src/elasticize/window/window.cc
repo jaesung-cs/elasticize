@@ -19,6 +19,7 @@ void key(GLFWwindow* windowHandle, int key, int scancode, int action, int mods)
 Window::Window(uint32_t width, uint32_t height, const std::string& title)
 {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
   window_ = glfwCreateWindow(size_[0], size_[1], title.c_str(), nullptr, nullptr);
 
   glfwSetWindowPos(window_, pos_[0], pos_[1]);

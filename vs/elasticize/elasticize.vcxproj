@@ -20,6 +20,7 @@
     <ClCompile Include="..\..\src\elasticize\gpu\framebuffer.cc" />
     <ClCompile Include="..\..\src\elasticize\gpu\graphics_shader.cc" />
     <ClCompile Include="..\..\src\elasticize\gpu\image.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\swapchain.cc" />
     <ClCompile Include="..\..\src\elasticize\utils\timer.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window_manager.cc" />
@@ -35,6 +36,7 @@
     <ClInclude Include="..\..\include\elasticize\gpu\framebuffer.h" />
     <ClInclude Include="..\..\include\elasticize\gpu\graphics_shader.h" />
     <ClInclude Include="..\..\include\elasticize\gpu\image.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\swapchain.h" />
     <ClInclude Include="..\..\include\elasticize\utils\timer.h" />
     <ClInclude Include="..\..\include\elasticize\window\window.h" />
     <ClInclude Include="..\..\include\elasticize\window\window_manager.h" />

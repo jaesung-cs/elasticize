@@ -79,6 +79,9 @@
     <ClCompile Include="..\..\src\elasticize\gpu\image.cc">
       <Filter>src\elasticize\gpu</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\swapchain.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\elasticize\elasticize.h">
@@ -118,6 +121,9 @@
       <Filter>include\elasticize\gpu</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\elasticize\gpu\image.h">
+      <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\swapchain.h">
       <Filter>include\elasticize\gpu</Filter>
     </ClInclude>
   </ItemGroup>

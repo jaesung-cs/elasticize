@@ -7,6 +7,7 @@
 #include <elasticize/window/window_manager.h>
 #include <elasticize/window/window.h>
 #include <elasticize/gpu/engine.h>
+#include <elasticize/gpu/swapchain.h>
 #include <elasticize/gpu/buffer.h>
 #include <elasticize/gpu/image.h>
 #include <elasticize/gpu/descriptor_set_layout.h>
@@ -53,7 +54,8 @@ int main()
     constexpr auto width = 1600;
     constexpr auto height = 900;
     elastic::window::Window window(width, height, "Animation");
-    engine.attachWindow(window);
+    elastic::gpu::Swapchain swapchain(engine, window);
+    const auto& swapchainInfo = swapchain.info();
 
     // Graphics shader
     const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
@@ -70,11 +72,11 @@ int main()
       {0, 0, vk::Format::eR32G32B32Sfloat, 0},
       {0, 1, vk::Format::eR32G32B32Sfloat, sizeof(float) * 3},
     };
+    graphicsShaderOptions.imageFormat = swapchainInfo.imageFormat;
     elastic::gpu::GraphicsShader graphicsShader(engine, graphicsShaderOptions);
 
     // Image views
     constexpr vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e4;
-    const auto& swapchainInfo = engine.swapchainInfo();
 
     elastic::gpu::Image::Options imageOptions;
     imageOptions.width = swapchainInfo.imageExtent.width;
@@ -93,7 +95,7 @@ int main()
       {
         transientColorImage,
         transientDepthImage,
-        engine.swapchainImage(0),
+        swapchain.image(0),
       });
     
     // Rendering command

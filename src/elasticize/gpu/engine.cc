@@ -57,14 +57,8 @@ Engine::~Engine()
   destroyDescriptorPool();
   destroyCommandPool();
   destroyMemoryPool();
-  destroySwapchain();
   destroyDevice();
   destroyInstance();
-}
-
-const Image& Engine::swapchainImage(uint32_t index) const
-{
-  return swapchainImages_[index];
 }
 
 vk::Buffer Engine::createBuffer(vk::DeviceSize size)
@@ -114,100 +108,6 @@ vk::ShaderModule Engine::createShaderModule(const std::string& filepath)
   const auto module = device_.createShaderModule(shaderModuleInfo);
 
   return module;
-}
-
-void Engine::attachWindow(const window::Window& window)
-{
-  destroySwapchain();
-
-  surface_ = window.createVulkanSurface(instance_);
-
-  createSwapchain(window);
-}
-
-void Engine::createSwapchain(const window::Window& window)
-{
-  // Swapchain
-  if (!physicalDevice_.getSurfaceSupportKHR(queueIndex_, surface_))
-    throw std::runtime_error("Device queue does not support surface");
-
-  const auto capabilities = physicalDevice_.getSurfaceCapabilitiesKHR(surface_);
-
-  // Triple buffering
-  auto imageCount = capabilities.minImageCount + 1;
-  if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
-    imageCount = capabilities.maxImageCount;
-  if (imageCount != 3)
-    throw std::runtime_error("Triple buffering is not supported");
-
-  // Present mode: use mailbox if available. Limit fps in draw call
-  vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
-  const auto presentModes = physicalDevice_.getSurfacePresentModesKHR(surface_);
-  for (auto availableMode : presentModes)
-  {
-    if (availableMode == vk::PresentModeKHR::eMailbox)
-    {
-      presentMode = vk::PresentModeKHR::eMailbox;
-      break;
-    }
-  }
-
-  // Swapchain format
-  const auto availableFormats = physicalDevice_.getSurfaceFormatsKHR(surface_);
-  auto format = availableFormats[0];
-  for (const auto& availableFormat : availableFormats)
-  {
-    if (availableFormat.format == vk::Format::eB8G8R8A8Srgb &&
-      availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
-      format = availableFormat;
-  }
-
-  // Swapchain extent
-  vk::Extent2D extent;
-  if (capabilities.currentExtent.width != UINT32_MAX)
-    extent = capabilities.currentExtent;
-  else
-  {
-    const auto width = window.width();
-    const auto height = window.height();
-
-    VkExtent2D actualExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
-    actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
-    actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
-    extent = actualExtent;
-  }
-
-  constexpr auto usage = vk::ImageUsageFlagBits::eColorAttachment;
-
-  swapchainInfo_ = vk::SwapchainCreateInfoKHR()
-    .setSurface(surface_)
-    .setMinImageCount(imageCount)
-    .setImageFormat(format.format)
-    .setImageColorSpace(format.colorSpace)
-    .setImageExtent(extent)
-    .setImageArrayLayers(1)
-    .setImageUsage(usage)
-    .setImageSharingMode(vk::SharingMode::eExclusive)
-    .setPreTransform(capabilities.currentTransform)
-    .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-    .setPresentMode(presentMode)
-    .setClipped(true);
-
-  swapchain_ = device_.createSwapchainKHR(swapchainInfo_);
-
-  for (auto image : device_.getSwapchainImagesKHR(swapchain_))
-    swapchainImages_.emplace_back(*this, image, format.format);
-}
-
-void Engine::destroySwapchain()
-{
-  swapchainImages_.clear();
-
-  if (swapchain_)
-    device_.destroySwapchainKHR(swapchain_);
-
-  if (surface_)
-    instance_.destroySurfaceKHR(surface_);
 }
 
 void Engine::createMemoryPool()

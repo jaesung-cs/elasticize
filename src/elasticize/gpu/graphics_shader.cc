@@ -13,7 +13,6 @@ GraphicsShader::GraphicsShader(Engine& engine, const Options& options)
   : engine_(engine)
 {
   auto device = engine_.device();
-  const auto& swapchainInfo = engine_.swapchainInfo();
 
   // Pipeline layout
   vk::DescriptorSetLayout setLayout = *options.pDescriptorSetLayout;
@@ -35,7 +34,7 @@ GraphicsShader::GraphicsShader(Engine& engine, const Options& options)
   // Multisampling requires resolve
   attachments.resize(3);
   attachments[0]
-    .setFormat(swapchainInfo.imageFormat)
+    .setFormat(options.imageFormat)
     .setSamples(samples)
     .setLoadOp(vk::AttachmentLoadOp::eClear)
     .setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -55,7 +54,7 @@ GraphicsShader::GraphicsShader(Engine& engine, const Options& options)
     .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
   attachments[2]
-    .setFormat(swapchainInfo.imageFormat)
+    .setFormat(options.imageFormat)
     .setSamples(vk::SampleCountFlagBits::e1)
     .setLoadOp(vk::AttachmentLoadOp::eDontCare)
     .setStoreOp(vk::AttachmentStoreOp::eStore)

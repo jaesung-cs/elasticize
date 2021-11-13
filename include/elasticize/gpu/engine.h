@@ -44,15 +44,13 @@ public:
   explicit Engine(Options options);
   ~Engine();
 
+  auto instance() const noexcept { return instance_; }
+  auto physicalDevice() const noexcept { return physicalDevice_; }
   auto queue() const noexcept { return queue_; }
+  auto queueIndex() const noexcept { return queueIndex_; }
   auto device() const noexcept { return device_; }
   auto transientCommandPool() const noexcept { return transientCommandPool_; }
   auto descriptorPool() const noexcept { return descriptorPool_; }
-  const auto& swapchainInfo() const noexcept { return swapchainInfo_; }
-
-  const Image& swapchainImage(uint32_t index) const;
-
-  void attachWindow(const window::Window& window);
 
 private:
   // By friend objects
@@ -69,9 +67,6 @@ private:
   void selectSuitablePhysicalDevice();
   void createDevice();
   void destroyDevice();
-
-  void createSwapchain(const window::Window& window);
-  void destroySwapchain();
 
   void createMemoryPool();
   void destroyMemoryPool();
@@ -104,11 +99,6 @@ private:
   // Command pool
   vk::CommandPool transientCommandPool_;
   vk::Fence transferFence_;
-
-  vk::SurfaceKHR surface_;
-  vk::SwapchainCreateInfoKHR swapchainInfo_;
-  vk::SwapchainKHR swapchain_;
-  std::vector<Image> swapchainImages_;
 
   // Descriptor pool
   vk::DescriptorPool descriptorPool_;
