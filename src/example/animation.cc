@@ -8,10 +8,12 @@
 #include <elasticize/window/window.h>
 #include <elasticize/gpu/engine.h>
 #include <elasticize/gpu/buffer.h>
+#include <elasticize/gpu/image.h>
 #include <elasticize/gpu/descriptor_set_layout.h>
 #include <elasticize/gpu/descriptor_set.h>
 #include <elasticize/gpu/compute_shader.h>
 #include <elasticize/gpu/graphics_shader.h>
+#include <elasticize/gpu/framebuffer.h>
 #include <elasticize/gpu/execution.h>
 #include <elasticize/utils/timer.h>
 
@@ -27,17 +29,31 @@ int main()
     options.memoryPoolSize = 256 * 1024 * 1024; // 256MB
     elastic::gpu::Engine engine(options);
 
-    elastic::window::Window window(1600, 900, "Animation");
-    engine.attachWindow(window);
-
+    // Descriptor
     elastic::gpu::DescriptorSetLayout descriptorSetLayout(engine, 1);
+    elastic::gpu::DescriptorSet descriptorSet(engine, descriptorSetLayout, {});
 
     // Render buffer
-    elastic::gpu::Buffer<float> buffer(engine, {
+    elastic::gpu::Buffer<float> vertexBuffer(engine, {
       0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
       1.f, 0.f, 0.f, 0.f, 1.f, 0.f,
       0.f, 1.f, 0.f, 0.f, 0.f, 1.f,
       });
+
+    elastic::gpu::Buffer<uint32_t> indexBuffer(engine, {
+      0, 1, 2,
+      });
+
+    elastic::gpu::Execution(engine)
+      .toGpu(vertexBuffer)
+      .toGpu(indexBuffer)
+      .run();
+
+    // Swapchain
+    constexpr auto width = 1600;
+    constexpr auto height = 900;
+    elastic::window::Window window(width, height, "Animation");
+    engine.attachWindow(window);
 
     // Graphics shader
     const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
@@ -54,7 +70,35 @@ int main()
       {0, 0, vk::Format::eR32G32B32Sfloat, 0},
       {0, 1, vk::Format::eR32G32B32Sfloat, sizeof(float) * 3},
     };
-    elastic::gpu::GraphicsShader graphicShader(engine, graphicsShaderOptions);
+    elastic::gpu::GraphicsShader graphicsShader(engine, graphicsShaderOptions);
+
+    // Image views
+    constexpr vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e4;
+    const auto& swapchainInfo = engine.swapchainInfo();
+
+    elastic::gpu::Image::Options imageOptions;
+    imageOptions.width = swapchainInfo.imageExtent.width;
+    imageOptions.height = swapchainInfo.imageExtent.height;
+    imageOptions.samples = samples;
+    imageOptions.format = swapchainInfo.imageFormat;
+    imageOptions.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+    elastic::gpu::Image transientColorImage(engine, imageOptions);
+
+    imageOptions.format = vk::Format::eD24UnormS8Uint;
+    imageOptions.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+    elastic::gpu::Image transientDepthImage(engine, imageOptions);
+
+    // Framebuffer
+    elastic::gpu::Framebuffer framebuffer(engine, width, height, graphicsShader,
+      {
+        transientColorImage,
+        transientDepthImage,
+        engine.swapchainImage(0),
+      });
+    
+    // Rendering command
+    elastic::gpu::Execution drawCommand(engine);
+    drawCommand.draw(graphicsShader, descriptorSet, framebuffer, vertexBuffer, indexBuffer);
 
     window.setKeyboardCallback([&window](int key, int action)
       {

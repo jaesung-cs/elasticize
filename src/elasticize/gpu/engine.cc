@@ -6,6 +6,7 @@
 #include <elasticize/window/window_manager.h>
 #include <elasticize/window/window.h>
 #include <elasticize/gpu/buffer.h>
+#include <elasticize/gpu/image.h>
 
 namespace elastic
 {
@@ -61,6 +62,11 @@ Engine::~Engine()
   destroyInstance();
 }
 
+const Image& Engine::swapchainImage(uint32_t index) const
+{
+  return swapchainImages_[index];
+}
+
 vk::Buffer Engine::createBuffer(vk::DeviceSize size)
 {
   const auto bufferInfo = vk::BufferCreateInfo()
@@ -79,9 +85,12 @@ vk::Buffer Engine::createBuffer(vk::DeviceSize size)
   return buffer;
 }
 
-void Engine::destroyBuffer(vk::Buffer buffer)
+void Engine::bindImageMemory(vk::Image image)
 {
-  device_.destroyBuffer(buffer);
+  const auto memoryRequirements = device_.getImageMemoryRequirements(image);
+  deviceMemoryOffset_ = align(deviceMemoryOffset_, memoryRequirements.alignment);
+  device_.bindImageMemory(image, deviceMemory_, deviceMemoryOffset_);
+  deviceMemoryOffset_ += memoryRequirements.size;
 }
 
 vk::ShaderModule Engine::createShaderModule(const std::string& filepath)
@@ -185,10 +194,15 @@ void Engine::createSwapchain(const window::Window& window)
     .setClipped(true);
 
   swapchain_ = device_.createSwapchainKHR(swapchainInfo_);
+
+  for (auto image : device_.getSwapchainImagesKHR(swapchain_))
+    swapchainImages_.emplace_back(*this, image, format.format);
 }
 
 void Engine::destroySwapchain()
 {
+  swapchainImages_.clear();
+
   if (swapchain_)
     device_.destroySwapchainKHR(swapchain_);
 

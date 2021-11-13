@@ -26,19 +26,8 @@ Buffer<T>::Buffer(Engine& engine, std::initializer_list<T> values)
 template <typename T>
 Buffer<T>::~Buffer()
 {
-  engine_.destroyBuffer(buffer_);
-}
-
-template <typename T>
-void Buffer<T>::toGpu()
-{
-  engine_.transferToGpu(data_, buffer_);
-}
-
-template <typename T>
-void Buffer<T>::fromGpu()
-{
-  engine_.transferFromGpu(data_, buffer_);
+  auto device = engine_.device();
+  device.destroyBuffer(buffer_);
 }
 }
 }

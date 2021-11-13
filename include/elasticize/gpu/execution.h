@@ -11,7 +11,9 @@ namespace gpu
 {
 class Engine;
 class ComputeShader;
+class GraphicsShader;
 class DescriptorSet;
+class Framebuffer;
 
 class Execution
 {
@@ -49,6 +51,12 @@ public:
 
   Execution& barrier();
 
+  template <typename T>
+  Execution& draw(GraphicsShader& graphicsShader, DescriptorSet& descriptorSet, Framebuffer& framebuffer, const Buffer<T>& vertexBuffer, const Buffer<uint32_t>& indexBuffer)
+  {
+    return draw(graphicsShader, descriptorSet, framebuffer, vertexBuffer, indexBuffer, static_cast<uint32_t>(indexBuffer.size()));
+  }
+
   void run();
 
 private:
@@ -56,6 +64,7 @@ private:
   Execution& fromGpu(vk::Buffer buffer, void* data, vk::DeviceSize size);
   Execution& copy(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
   Execution& runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX, const void* pushConstants, uint32_t size);
+  Execution& draw(GraphicsShader& graphicsShader, DescriptorSet& descriptorSet, Framebuffer& framebuffer, vk::Buffer vertexBuffer, vk::Buffer indexBuffer, uint32_t indexCount);
 
   Engine& engine_;
   vk::Device device_;

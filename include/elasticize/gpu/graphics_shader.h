@@ -49,6 +49,10 @@ public:
 
   ~GraphicsShader();
 
+  auto renderPass() const noexcept { return renderPass_; }
+  auto pipelineLayout() const noexcept { return pipelineLayout_; }
+  auto pipeline() const noexcept { return pipeline_; }
+
 private:
   Engine& engine_;
 

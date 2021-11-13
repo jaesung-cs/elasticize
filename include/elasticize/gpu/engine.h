@@ -15,6 +15,7 @@ namespace gpu
 template <typename T>
 class Buffer;
 
+class Image;
 class Execution;
 class GraphicsShader;
 class ComputeShader;
@@ -24,6 +25,7 @@ class Engine
   template <typename T>
   friend class Buffer;
 
+  friend class Image;
   friend class Execution;
   friend class GraphicsShader;
   friend class ComputeShader;
@@ -48,12 +50,15 @@ public:
   auto descriptorPool() const noexcept { return descriptorPool_; }
   const auto& swapchainInfo() const noexcept { return swapchainInfo_; }
 
+  const Image& swapchainImage(uint32_t index) const;
+
   void attachWindow(const window::Window& window);
 
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
-  void destroyBuffer(vk::Buffer buffer);
+
+  void bindImageMemory(vk::Image image);
 
   vk::ShaderModule createShaderModule(const std::string& filepath);
 
@@ -103,6 +108,7 @@ private:
   vk::SurfaceKHR surface_;
   vk::SwapchainCreateInfoKHR swapchainInfo_;
   vk::SwapchainKHR swapchain_;
+  std::vector<Image> swapchainImages_;
 
   // Descriptor pool
   vk::DescriptorPool descriptorPool_;

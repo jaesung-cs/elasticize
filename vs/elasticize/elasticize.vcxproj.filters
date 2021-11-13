@@ -73,6 +73,12 @@
     <ClCompile Include="..\..\src\elasticize\gpu\graphics_shader.cc">
       <Filter>src\elasticize\gpu</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\framebuffer.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\image.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\elasticize\elasticize.h">
@@ -106,6 +112,12 @@
       <Filter>include\elasticize\gpu</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\elasticize\gpu\graphics_shader.h">
+      <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\framebuffer.h">
+      <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\image.h">
       <Filter>include\elasticize\gpu</Filter>
     </ClInclude>
   </ItemGroup>

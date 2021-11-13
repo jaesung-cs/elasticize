@@ -27,9 +27,6 @@ public:
   const T* data() const { return data_.data(); }
   auto size() const { return data_.size(); }
 
-  void toGpu();
-  void fromGpu();
-
 private:
   auto buffer() const { return buffer_; }
 

@@ -4,7 +4,9 @@
 
 #include <elasticize/gpu/engine.h>
 #include <elasticize/gpu/compute_shader.h>
+#include <elasticize/gpu/graphics_shader.h>
 #include <elasticize/gpu/descriptor_set.h>
+#include <elasticize/gpu/framebuffer.h>
 
 namespace elastic
 {
@@ -107,6 +109,55 @@ Execution& Execution::barrier()
     vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eTransfer,
     {},
     memoryBarrier, {}, {});
+
+  return *this;
+}
+
+Execution& Execution::draw(GraphicsShader& graphicsShader, DescriptorSet& descriptorSet, Framebuffer& framebuffer, vk::Buffer vertexBuffer, vk::Buffer indexBuffer, uint32_t indexCount)
+{
+  commandBuffer_.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsShader.pipeline());
+
+  const auto width = framebuffer.width();
+  const auto height = framebuffer.height();
+
+  auto viewport = vk::Viewport()
+    .setX(0.f)
+    .setY(0.f)
+    .setWidth(width)
+    .setHeight(height)
+    .setMinDepth(0.f)
+    .setMaxDepth(1.f);
+  commandBuffer_.setViewport(0, viewport);
+
+  auto scissors = vk::Rect2D()
+    .setOffset({ 0, 0 })
+    .setExtent({ width, height });
+  commandBuffer_.setScissor(0, scissors);
+
+  commandBuffer_.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphicsShader.pipelineLayout(), 0, { descriptorSet }, {});
+
+  auto renderArea = vk::Rect2D()
+    .setOffset(vk::Offset2D(0, 0))
+    .setExtent(vk::Extent2D(framebuffer.width(), framebuffer.height()));
+
+  std::vector<vk::ClearValue> clearValues = {
+    vk::ClearValue().setColor(std::array<float, 4>{ 0.f, 0.f, 0.f, 1.f }),
+    vk::ClearValue().setDepthStencil(vk::ClearDepthStencilValue(0.f)),
+  };
+
+  auto beginInfo = vk::RenderPassBeginInfo()
+    .setRenderPass(graphicsShader.renderPass())
+    .setRenderArea(renderArea)
+    .setClearValues(clearValues)
+    .setFramebuffer(framebuffer);
+
+  commandBuffer_.beginRenderPass(beginInfo, vk::SubpassContents::eInline);
+
+  commandBuffer_.bindVertexBuffers(0, { vertexBuffer }, { 0 });
+  commandBuffer_.bindIndexBuffer(indexBuffer, 0, vk::IndexType::eUint32);
+  commandBuffer_.drawIndexed(indexCount, 1, 0, 0, 0);
+
+  commandBuffer_.endRenderPass();
 
   return *this;
 }
