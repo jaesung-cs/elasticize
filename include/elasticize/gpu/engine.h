@@ -40,6 +40,7 @@ public:
   auto device() const noexcept { return device_; }
   auto transientCommandPool() const noexcept { return transientCommandPool_; }
   auto descriptorPool() const noexcept { return descriptorPool_; }
+  const auto& swapchainInfo() const noexcept { return swapchainInfo_; }
 
   void attachWindow(const window::Window& window);
 

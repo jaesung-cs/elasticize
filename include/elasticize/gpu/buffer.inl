@@ -16,6 +16,14 @@ Buffer<T>::Buffer(Engine& engine, uint64_t count)
 }
 
 template <typename T>
+Buffer<T>::Buffer(Engine& engine, std::initializer_list<T> values)
+  : engine_(engine)
+  , data_(std::move(values))
+{
+  buffer_ = engine.createBuffer(sizeof(T) * values.size());
+}
+
+template <typename T>
 Buffer<T>::~Buffer()
 {
   engine_.destroyBuffer(buffer_);

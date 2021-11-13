@@ -35,6 +35,12 @@
     <Filter Include="src\elasticize\utils">
       <UniqueIdentifier>{4e0b81ef-a2eb-4664-ad40-0dc0ccd03847}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\elasticize\shader\radix_sort">
+      <UniqueIdentifier>{da33542b-025c-49d4-8073-61b73f49ecf0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\elasticize\shader\graphics">
+      <UniqueIdentifier>{ea4c897f-656e-4870-a1f2-ea1b8b8fa813}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\elasticize\window\window.cc">
@@ -62,6 +68,9 @@
       <Filter>src\elasticize\gpu</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\elasticize\gpu\compute_shader.cc">
+      <Filter>src\elasticize\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\elasticize\gpu\graphics_shader.cc">
       <Filter>src\elasticize\gpu</Filter>
     </ClCompile>
   </ItemGroup>
@@ -96,22 +105,31 @@
     <ClInclude Include="..\..\include\elasticize\gpu\descriptor_set_layout.h">
       <Filter>include\elasticize\gpu</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\elasticize\gpu\graphics_shader.h">
+      <Filter>include\elasticize\gpu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\src\elasticize\shader\count.comp">
-      <Filter>src\elasticize\shader</Filter>
-    </None>
     <None Include="..\..\include\elasticize\gpu\buffer.inl">
       <Filter>include\elasticize\gpu</Filter>
     </None>
-    <None Include="..\..\src\elasticize\shader\scan_forward.comp">
-      <Filter>src\elasticize\shader</Filter>
+    <None Include="..\..\src\elasticize\shader\radix_sort\count.comp">
+      <Filter>src\elasticize\shader\radix_sort</Filter>
     </None>
-    <None Include="..\..\src\elasticize\shader\scan_backward.comp">
-      <Filter>src\elasticize\shader</Filter>
+    <None Include="..\..\src\elasticize\shader\radix_sort\distribute.comp">
+      <Filter>src\elasticize\shader\radix_sort</Filter>
     </None>
-    <None Include="..\..\src\elasticize\shader\distribute.comp">
-      <Filter>src\elasticize\shader</Filter>
+    <None Include="..\..\src\elasticize\shader\radix_sort\scan_backward.comp">
+      <Filter>src\elasticize\shader\radix_sort</Filter>
+    </None>
+    <None Include="..\..\src\elasticize\shader\radix_sort\scan_forward.comp">
+      <Filter>src\elasticize\shader\radix_sort</Filter>
+    </None>
+    <None Include="..\..\src\elasticize\shader\graphics\color.frag">
+      <Filter>src\elasticize\shader\graphics</Filter>
+    </None>
+    <None Include="..\..\src\elasticize\shader\graphics\color.vert">
+      <Filter>src\elasticize\shader\graphics</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -15,6 +15,7 @@ class Buffer
 public:
   Buffer() = delete;
   Buffer(Engine& engine, uint64_t count);
+  Buffer(Engine& engine, std::initializer_list<T> values);
   ~Buffer();
 
   operator vk::Buffer() const noexcept { return buffer_; }

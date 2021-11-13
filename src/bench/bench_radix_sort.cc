@@ -74,10 +74,10 @@ int main()
       });
 
     const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
-    elastic::gpu::ComputeShader countShader(engine, shaderDirpath + "\\count.comp.spv", descriptorSetLayout, {});
-    elastic::gpu::ComputeShader scanForwardShader(engine, shaderDirpath + "\\scan_forward.comp.spv", descriptorSetLayout, {});
-    elastic::gpu::ComputeShader scanBackwardShader(engine, shaderDirpath + "\\scan_backward.comp.spv", descriptorSetLayout, {});
-    elastic::gpu::ComputeShader distributeShader(engine, shaderDirpath + "\\distribute.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader countShader(engine, shaderDirpath + "\\radix_sort\\count.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanForwardShader(engine, shaderDirpath + "\\radix_sort\\scan_forward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanBackwardShader(engine, shaderDirpath + "\\radix_sort\\scan_backward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader distributeShader(engine, shaderDirpath + "\\radix_sort\\distribute.comp.spv", descriptorSetLayout, {});
 
     // Move to GPU
     elastic::gpu::Execution(engine).toGpu(arrayBuffer).run();

@@ -64,7 +64,9 @@ Engine::~Engine()
 vk::Buffer Engine::createBuffer(vk::DeviceSize size)
 {
   const auto bufferInfo = vk::BufferCreateInfo()
-    .setUsage(vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst)
+    .setUsage(
+      vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer)
     .setSize(size);
 
   auto buffer = device_.createBuffer(bufferInfo);
