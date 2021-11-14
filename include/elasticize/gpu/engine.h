@@ -15,12 +15,20 @@ namespace gpu
 template <typename T>
 class Buffer;
 
+class Image;
+class Execution;
+class GraphicsShader;
+class ComputeShader;
+
 class Engine
 {
   template <typename T>
   friend class Buffer;
 
+  friend class Image;
   friend class Execution;
+  friend class GraphicsShader;
+  friend class ComputeShader;
 
 public:
   struct Options
@@ -36,97 +44,29 @@ public:
   explicit Engine(Options options);
   ~Engine();
 
-  auto queue() const noexcept { return queue_; }
-  auto device() const noexcept { return device_; }
-  auto transientCommandPool() const noexcept { return transientCommandPool_; }
-  auto descriptorPool() const noexcept { return descriptorPool_; }
-
-  void attachWindow(const window::Window& window);
+  vk::Instance instance() const noexcept;
+  vk::PhysicalDevice physicalDevice() const noexcept;
+  vk::Queue queue() const noexcept;
+  uint32_t queueIndex() const noexcept;
+  vk::Device device() const noexcept;
+  vk::CommandPool transientCommandPool() const noexcept;
+  vk::DescriptorPool descriptorPool() const noexcept;
 
 private:
   // By friend objects
   vk::Buffer createBuffer(vk::DeviceSize size);
-  void destroyBuffer(vk::Buffer buffer);
 
-  template <typename T>
-  void transferToGpu(const std::vector<T>& data, vk::Buffer buffer)
-  {
-    transferToGpu(data.data(), sizeof(T) * data.size(), buffer);
-  }
+  void bindImageMemory(vk::Image image);
 
-  void transferToGpu(const void* data, vk::DeviceSize size, vk::Buffer buffer);
+  vk::ShaderModule createShaderModule(const std::string& filepath);
 
-  template <typename T>
-  void transferFromGpu(std::vector<T>& data, vk::Buffer buffer)
-  {
-    transferFromGpu(data.data(), sizeof(T) * data.size(), buffer);
-  }
-
-  void transferFromGpu(void* data, vk::DeviceSize size, vk::Buffer buffer);
-
-  void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize byteSize);
+  vk::Buffer stagingBuffer() const noexcept;
+  void fromStagingBuffer(void* target, vk::DeviceSize srcOffset, vk::DeviceSize size);
+  void toStagingBuffer(vk::DeviceSize targetOffset, const void* data, vk::DeviceSize size);
 
 private:
-  void createInstance();
-  void destroyInstance();
-
-  void selectSuitablePhysicalDevice();
-  void createDevice();
-  void destroyDevice();
-
-  void createSwapchain(const window::Window& window);
-  void destroySwapchain();
-
-  void createMemoryPool();
-  void destroyMemoryPool();
-
-  void createCommandPool();
-  void destroyCommandPool();
-
-  void createDescriptorPool();
-  void destroyDescriptorPool();
-
-private:
-  Options options_;
-  vk::Instance instance_;
-  vk::DebugUtilsMessengerEXT messenger_;
-
-  vk::PhysicalDevice physicalDevice_;
-  vk::Device device_;
-  vk::Queue queue_;
-  uint32_t queueIndex_ = 0;
-
-  // Memory pool
-  uint32_t deviceIndex_ = 0;
-  uint32_t hostIndex_ = 0;
-  vk::DeviceMemory deviceMemory_;
-  vk::DeviceSize deviceMemoryOffset_ = 0;
-  vk::DeviceMemory hostMemory_;
-  vk::Buffer stagingBuffer_;
-  uint8_t* stagingBufferMap_ = nullptr;
-
-  // Command pool
-  vk::CommandPool transientCommandPool_;
-  vk::Fence transferFence_;
-
-  vk::SurfaceKHR surface_;
-  vk::SwapchainCreateInfoKHR swapchainInfo_;
-  vk::SwapchainKHR swapchain_;
-
-  // Descriptor pool
-  vk::DescriptorPool descriptorPool_;
-
-  // Compute pipelines
-  struct ComputePipeline
-  {
-    vk::DescriptorSetLayout descriptorSetLayout;
-    vk::PipelineLayout pipelineLayout;
-    vk::Pipeline pipeline;
-  };
-  std::vector<ComputePipeline> computePipelines_;
-
-  // Descriptor sets
-  std::vector<vk::DescriptorSet> descriptorSets_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

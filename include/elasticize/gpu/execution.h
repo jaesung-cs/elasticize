@@ -11,13 +11,16 @@ namespace gpu
 {
 class Engine;
 class ComputeShader;
+class GraphicsShader;
 class DescriptorSet;
+class Framebuffer;
+class Swapchain;
 
 class Execution
 {
 public:
   Execution() = delete;
-  Execution(Engine& engine);
+  Execution(Engine engine);
   ~Execution();
 
   template <typename T>
@@ -41,7 +44,7 @@ public:
   }
 
   template <typename T>
-  Execution& runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX,
+  Execution& runComputeShader(ComputeShader computeShader, DescriptorSet descriptorSet, uint32_t groupCountX,
     const T& pushConstants)
   {
     return runComputeShader(computeShader, descriptorSet, groupCountX, &pushConstants, sizeof(T));
@@ -49,31 +52,26 @@ public:
 
   Execution& barrier();
 
+  template <typename T>
+  Execution& draw(GraphicsShader graphicsShader, DescriptorSet descriptorSet, Framebuffer framebuffer, const Buffer<T>& vertexBuffer, const Buffer<uint32_t>& indexBuffer)
+  {
+    return draw(graphicsShader, descriptorSet, framebuffer, vertexBuffer, indexBuffer, static_cast<uint32_t>(indexBuffer.size()));
+  }
+
+  Execution& end();
+
   void run();
+  void present(vk::Semaphore imageAvailableSemaphore, vk::Semaphore renderFinishedSemaphore, vk::Fence renderFinishedFence, Swapchain swapchain, uint32_t imageIndex);
 
 private:
   Execution& toGpu(vk::Buffer buffer, const void* data, vk::DeviceSize size);
   Execution& fromGpu(vk::Buffer buffer, void* data, vk::DeviceSize size);
   Execution& copy(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
-  Execution& runComputeShader(ComputeShader& computeShader, DescriptorSet& descriptorSet, uint32_t groupCountX, const void* pushConstants, uint32_t size);
+  Execution& runComputeShader(ComputeShader computeShader, DescriptorSet descriptorSet, uint32_t groupCountX, const void* pushConstants, uint32_t size);
+  Execution& draw(GraphicsShader graphicsShader, DescriptorSet descriptorSet, Framebuffer framebuffer, vk::Buffer vertexBuffer, vk::Buffer indexBuffer, uint32_t indexCount);
 
-  Engine& engine_;
-  vk::Device device_;
-  vk::Queue queue_;
-  vk::CommandPool transientCommandPool_;
-
-  vk::Fence fence_;
-  vk::CommandBuffer commandBuffer_;
-  vk::DeviceSize stagingBufferOffsetToGpu_ = 0;
-
-  struct FromGpu
-  {
-    void* target;
-    vk::DeviceSize stagingBufferOffset;
-    vk::DeviceSize size;
-  };
-  std::vector<FromGpu> fromGpus_;
-  vk::DeviceSize stagingBufferOffsetFromGpu_ = 0;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

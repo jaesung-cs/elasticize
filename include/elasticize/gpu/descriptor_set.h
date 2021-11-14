@@ -32,15 +32,14 @@ private:
 
 public:
   DescriptorSet() = delete;
-  DescriptorSet(Engine& engine, DescriptorSetLayout& descriptorSetLayout, std::initializer_list<BufferProxy> bufferProxies);
+  DescriptorSet(Engine engine, DescriptorSetLayout descriptorSetLayout, std::initializer_list<BufferProxy> bufferProxies);
   ~DescriptorSet();
 
-  operator vk::DescriptorSet() const noexcept { return descriptorSet_; }
+  operator vk::DescriptorSet() const noexcept;
 
 private:
-  Engine& engine_;
-
-  vk::DescriptorSet descriptorSet_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

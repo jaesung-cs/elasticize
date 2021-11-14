@@ -7,52 +7,77 @@ namespace elastic
 {
 namespace gpu
 {
-DescriptorSet::DescriptorSet(Engine& engine,
-  DescriptorSetLayout& descriptorSetLayout,
-  std::initializer_list<BufferProxy> bufferProxies)
-  : engine_(engine)
+class DescriptorSet::Impl
 {
-  auto device = engine_.device();
-  auto descriptorPool = engine_.descriptorPool();
+public:
+  Impl() = delete;
 
-  std::vector<vk::Buffer> buffers;
-  for (auto bufferProxy : bufferProxies)
-    buffers.push_back(bufferProxy);
-
-  vk::DescriptorSetLayout setLayout = descriptorSetLayout;
-
-  const auto descriptorSetAllocateInfo = vk::DescriptorSetAllocateInfo()
-    .setDescriptorPool(descriptorPool)
-    .setSetLayouts(setLayout);
-
-  descriptorSet_ = device.allocateDescriptorSets(descriptorSetAllocateInfo)[0];
-
-  std::vector<vk::DescriptorBufferInfo> bufferInfos(buffers.size());
-  std::vector<vk::WriteDescriptorSet> writes(buffers.size());
-  for (int i = 0; i < buffers.size(); i++)
+  Impl(Engine engine,
+    DescriptorSetLayout descriptorSetLayout,
+    std::initializer_list<BufferProxy> bufferProxies)
+    : engine_(engine)
   {
-    bufferInfos[i]
-      .setBuffer(buffers[i])
-      .setOffset(0)
-      .setRange(VK_WHOLE_SIZE);
+    auto device = engine_.device();
+    auto descriptorPool = engine_.descriptorPool();
 
-    writes[i]
-      .setDstBinding(i)
-      .setDstSet(descriptorSet_)
-      .setDescriptorType(vk::DescriptorType::eStorageBuffer)
-      .setDescriptorCount(1)
-      .setBufferInfo(bufferInfos[i]);
+    std::vector<vk::Buffer> buffers;
+    for (auto bufferProxy : bufferProxies)
+      buffers.push_back(bufferProxy);
+
+    vk::DescriptorSetLayout setLayout = descriptorSetLayout;
+
+    const auto descriptorSetAllocateInfo = vk::DescriptorSetAllocateInfo()
+      .setDescriptorPool(descriptorPool)
+      .setSetLayouts(setLayout);
+
+    descriptorSet_ = device.allocateDescriptorSets(descriptorSetAllocateInfo)[0];
+
+    std::vector<vk::DescriptorBufferInfo> bufferInfos(buffers.size());
+    std::vector<vk::WriteDescriptorSet> writes(buffers.size());
+    for (int i = 0; i < buffers.size(); i++)
+    {
+      bufferInfos[i]
+        .setBuffer(buffers[i])
+        .setOffset(0)
+        .setRange(VK_WHOLE_SIZE);
+
+      writes[i]
+        .setDstBinding(i)
+        .setDstSet(descriptorSet_)
+        .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+        .setDescriptorCount(1)
+        .setBufferInfo(bufferInfos[i]);
+    }
+
+    device.updateDescriptorSets(writes, {});
   }
 
-  device.updateDescriptorSets(writes, {});
+  ~Impl()
+  {
+    auto device = engine_.device();
+    auto descriptorPool = engine_.descriptorPool();
+
+    device.freeDescriptorSets(descriptorPool, descriptorSet_);
+  }
+
+  operator vk::DescriptorSet() const noexcept { return descriptorSet_; }
+
+private:
+  Engine engine_;
+
+  vk::DescriptorSet descriptorSet_;
+};
+
+DescriptorSet::DescriptorSet(Engine engine, DescriptorSetLayout descriptorSetLayout, std::initializer_list<BufferProxy> bufferProxies)
+  : impl_(std::make_shared<Impl>(engine, descriptorSetLayout, std::move(bufferProxies)))
+{
 }
 
-DescriptorSet::~DescriptorSet()
-{
-  auto device = engine_.device();
-  auto descriptorPool = engine_.descriptorPool();
+DescriptorSet::~DescriptorSet() = default;
 
-  device.freeDescriptorSets(descriptorPool, descriptorSet_);
+DescriptorSet::operator vk::DescriptorSet() const noexcept
+{
+  return *impl_;
 }
 }
 }

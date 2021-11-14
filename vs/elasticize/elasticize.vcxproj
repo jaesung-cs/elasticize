@@ -17,6 +17,10 @@
     <ClCompile Include="..\..\src\elasticize\gpu\descriptor_set_layout.cc" />
     <ClCompile Include="..\..\src\elasticize\gpu\engine.cc" />
     <ClCompile Include="..\..\src\elasticize\gpu\execution.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\framebuffer.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\graphics_shader.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\image.cc" />
+    <ClCompile Include="..\..\src\elasticize\gpu\swapchain.cc" />
     <ClCompile Include="..\..\src\elasticize\utils\timer.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window.cc" />
     <ClCompile Include="..\..\src\elasticize\window\window_manager.cc" />
@@ -29,16 +33,22 @@
     <ClInclude Include="..\..\include\elasticize\gpu\descriptor_set_layout.h" />
     <ClInclude Include="..\..\include\elasticize\gpu\engine.h" />
     <ClInclude Include="..\..\include\elasticize\gpu\execution.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\framebuffer.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\graphics_shader.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\image.h" />
+    <ClInclude Include="..\..\include\elasticize\gpu\swapchain.h" />
     <ClInclude Include="..\..\include\elasticize\utils\timer.h" />
     <ClInclude Include="..\..\include\elasticize\window\window.h" />
     <ClInclude Include="..\..\include\elasticize\window\window_manager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\include\elasticize\gpu\buffer.inl" />
-    <None Include="..\..\src\elasticize\shader\count.comp" />
-    <None Include="..\..\src\elasticize\shader\distribute.comp" />
-    <None Include="..\..\src\elasticize\shader\scan_forward.comp" />
-    <None Include="..\..\src\elasticize\shader\scan_backward.comp" />
+    <None Include="..\..\src\elasticize\shader\graphics\color.frag" />
+    <None Include="..\..\src\elasticize\shader\graphics\color.vert" />
+    <None Include="..\..\src\elasticize\shader\radix_sort\count.comp" />
+    <None Include="..\..\src\elasticize\shader\radix_sort\distribute.comp" />
+    <None Include="..\..\src\elasticize\shader\radix_sort\scan_backward.comp" />
+    <None Include="..\..\src\elasticize\shader\radix_sort\scan_forward.comp" />
   </ItemGroup>
   <!-- Added to disable build up-to-date check -->
   <PropertyGroup>

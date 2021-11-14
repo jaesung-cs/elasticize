@@ -6,31 +6,56 @@ namespace elastic
 {
 namespace gpu
 {
-DescriptorSetLayout::DescriptorSetLayout(Engine& engine, uint32_t storageBufferCount)
-  : engine_(engine)
+class DescriptorSetLayout::Impl
 {
-  auto device = engine_.device();
+public:
+  Impl() = delete;
 
-  // Descriptor set layout
-  std::vector<vk::DescriptorSetLayoutBinding> bindings(storageBufferCount);
-  for (int i = 0; i < storageBufferCount; i++)
+  Impl(Engine engine, uint32_t storageBufferCount)
+    : engine_(engine)
   {
-    bindings[i]
-      .setBinding(i)
-      .setStageFlags(vk::ShaderStageFlagBits::eCompute)
-      .setDescriptorType(vk::DescriptorType::eStorageBuffer)
-      .setDescriptorCount(1);
+    auto device = engine_.device();
+
+    // Descriptor set layout
+    std::vector<vk::DescriptorSetLayoutBinding> bindings(storageBufferCount);
+    for (uint32_t i = 0; i < storageBufferCount; i++)
+    {
+      bindings[i]
+        .setBinding(i)
+        .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+        .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+        .setDescriptorCount(1);
+    }
+
+    const auto descriptorSetLayoutInfo = vk::DescriptorSetLayoutCreateInfo().setBindings(bindings);
+    descriptorSetLayout_ = device.createDescriptorSetLayout(descriptorSetLayoutInfo);
   }
 
-  const auto descriptorSetLayoutInfo = vk::DescriptorSetLayoutCreateInfo().setBindings(bindings);
-  descriptorSetLayout_ = device.createDescriptorSetLayout(descriptorSetLayoutInfo);
+  ~Impl()
+  {
+    auto device = engine_.device();
+
+    device.destroyDescriptorSetLayout(descriptorSetLayout_);
+  }
+
+  operator vk::DescriptorSetLayout() const noexcept { return descriptorSetLayout_; }
+
+private:
+  Engine engine_;
+
+  vk::DescriptorSetLayout descriptorSetLayout_;
+};
+
+DescriptorSetLayout::DescriptorSetLayout(Engine engine, uint32_t storageBufferCount)
+  : impl_(std::make_shared<Impl>(engine, storageBufferCount))
+{
 }
 
-DescriptorSetLayout::~DescriptorSetLayout()
-{
-  auto device = engine_.device();
+DescriptorSetLayout::~DescriptorSetLayout() = default;
 
-  device.destroyDescriptorSetLayout(descriptorSetLayout_);
+DescriptorSetLayout::operator vk::DescriptorSetLayout() const noexcept
+{
+  return *impl_;
 }
 }
 }

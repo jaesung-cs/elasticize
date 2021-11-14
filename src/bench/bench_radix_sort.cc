@@ -74,10 +74,10 @@ int main()
       });
 
     const std::string shaderDirpath = "C:\\workspace\\elasticize\\src\\elasticize\\shader";
-    elastic::gpu::ComputeShader countShader(engine, shaderDirpath + "\\count.comp.spv", descriptorSetLayout, {});
-    elastic::gpu::ComputeShader scanForwardShader(engine, shaderDirpath + "\\scan_forward.comp.spv", descriptorSetLayout, {});
-    elastic::gpu::ComputeShader scanBackwardShader(engine, shaderDirpath + "\\scan_backward.comp.spv", descriptorSetLayout, {});
-    elastic::gpu::ComputeShader distributeShader(engine, shaderDirpath + "\\distribute.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader countShader(engine, shaderDirpath + "\\radix_sort\\count.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanForwardShader(engine, shaderDirpath + "\\radix_sort\\scan_forward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader scanBackwardShader(engine, shaderDirpath + "\\radix_sort\\scan_backward.comp.spv", descriptorSetLayout, {});
+    elastic::gpu::ComputeShader distributeShader(engine, shaderDirpath + "\\radix_sort\\distribute.comp.spv", descriptorSetLayout, {});
 
     // Move to GPU
     elastic::gpu::Execution(engine).toGpu(arrayBuffer).run();
@@ -120,7 +120,7 @@ int main()
       } while (simdSize > 1);
 
       // Scan backward
-      for (int i = phases.size() - 1; i >= 0; i--)
+      for (int i = static_cast<int>(phases.size()) - 1; i >= 0; i--)
       {
         const auto& phase = phases[i];
         sortInfo = { phase.simdSize, bitOffset, phase.scanOffset };
@@ -140,6 +140,7 @@ int main()
         .copy(outBuffer, arrayBuffer)
         .barrier();
     }
+    execution.end();
 
     std::cout << "GPU radix sort" << std::endl;
     elastic::utils::Timer gpuTimer;
