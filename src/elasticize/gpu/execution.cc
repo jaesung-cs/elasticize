@@ -15,25 +15,27 @@ namespace gpu
 Execution::Execution(Engine& engine)
   : engine_(engine)
 {
-  queue_ = engine.queue();
-  device_ = engine.device();
-  transientCommandPool_ = engine.transientCommandPool();
+  auto device = engine_.device();
+  auto transientCommandPool = engine_.transientCommandPool();
 
-  fence_ = device_.createFence({});
+  fence_ = device.createFence({});
 
   const auto allocateInfo = vk::CommandBufferAllocateInfo()
     .setLevel(vk::CommandBufferLevel::ePrimary)
-    .setCommandPool(transientCommandPool_)
+    .setCommandPool(transientCommandPool)
     .setCommandBufferCount(1);
-  commandBuffer_ = device_.allocateCommandBuffers(allocateInfo)[0];
+  commandBuffer_ = device.allocateCommandBuffers(allocateInfo)[0];
 
   commandBuffer_.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 }
 
 Execution::~Execution()
 {
-  device_.freeCommandBuffers(transientCommandPool_, commandBuffer_);
-  device_.destroyFence(fence_);
+  auto device = engine_.device();
+  auto transientCommandPool = engine_.transientCommandPool();
+
+  device.freeCommandBuffers(transientCommandPool, commandBuffer_);
+  device.destroyFence(fence_);
 }
 
 Execution& Execution::toGpu(vk::Buffer buffer, const void* data, vk::DeviceSize size)
@@ -164,13 +166,16 @@ Execution& Execution::draw(GraphicsShader& graphicsShader, DescriptorSet& descri
 
 void Execution::run()
 {
+  auto device = engine_.device();
+  auto queue = engine_.queue();
+
   commandBuffer_.end();
 
   const auto submit = vk::SubmitInfo().setCommandBuffers(commandBuffer_);
-  queue_.submit(submit, fence_);
+  queue.submit(submit, fence_);
 
-  device_.waitForFences(fence_, true, UINT64_MAX);
-  device_.resetFences(fence_);
+  device.waitForFences(fence_, true, UINT64_MAX);
+  device.resetFences(fence_);
   commandBuffer_.reset();
 
   // From staging buffer to actual buffers

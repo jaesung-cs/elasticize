@@ -34,7 +34,8 @@ Framebuffer::~Framebuffer()
 {
   auto device = engine_.device();
 
-  device.destroyFramebuffer(framebuffer_);
+  if (framebuffer_)
+    device.destroyFramebuffer(framebuffer_);
 }
 }
 }

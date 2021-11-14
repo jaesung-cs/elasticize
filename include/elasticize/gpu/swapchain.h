@@ -23,6 +23,8 @@ public:
   ~Swapchain();
 
   const auto& info() const noexcept { return swapchainInfo_; }
+  auto imageCount() const noexcept { return swapchainImages_.size(); }
+  const auto& images() const noexcept { return swapchainImages_; }
   const Image& image(uint32_t index) const;
 
 private:

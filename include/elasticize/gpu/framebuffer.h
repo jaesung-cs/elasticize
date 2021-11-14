@@ -18,6 +18,29 @@ public:
   Framebuffer(Engine& engine, uint32_t width, uint32_t height, GraphicsShader& graphicsShader, std::initializer_list<std::reference_wrapper<const Image>> attachments);
   ~Framebuffer();
 
+  Framebuffer(const Framebuffer& rhs) = delete;
+  Framebuffer& operator = (const Framebuffer& rhs) = delete;
+
+  Framebuffer(Framebuffer&& rhs) noexcept
+    : engine_(rhs.engine_)
+    , width_(rhs.width_)
+    , height_(rhs.height_)
+    , framebuffer_(rhs.framebuffer_)
+  {
+    rhs.framebuffer_ = nullptr;
+  }
+
+  Framebuffer& operator = (Framebuffer&& rhs) noexcept
+  {
+    width_ = rhs.width_;
+    height_ = rhs.height_;
+    framebuffer_ = rhs.framebuffer_;
+
+    rhs.framebuffer_ = nullptr;
+
+    return *this;
+  }
+
   operator vk::Framebuffer() const noexcept { return framebuffer_; }
 
   auto width() const noexcept { return width_; }

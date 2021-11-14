@@ -22,6 +22,42 @@ public:
   Execution(Engine& engine);
   ~Execution();
 
+  Execution(const Execution& rhs) = delete;
+  Execution& operator = (const Execution& rhs) = delete;
+
+  Execution(Execution&& rhs) noexcept
+    : engine_(rhs.engine_)
+  {
+    fence_ = rhs.fence_;
+    commandBuffer_ = rhs.commandBuffer_;
+    stagingBufferOffsetToGpu_ = rhs.stagingBufferOffsetToGpu_;
+    fromGpus_ = std::move(rhs.fromGpus_);
+    stagingBufferOffsetFromGpu_ = rhs.stagingBufferOffsetFromGpu_;
+
+    rhs.fence_ = nullptr;
+    rhs.commandBuffer_ = nullptr;
+    rhs.stagingBufferOffsetToGpu_ = 0;
+    rhs.fromGpus_.clear();
+    rhs.stagingBufferOffsetFromGpu_ = 0;
+  }
+
+  Execution& operator = (Execution&& rhs) noexcept
+  {
+    fence_ = rhs.fence_;
+    commandBuffer_ = rhs.commandBuffer_;
+    stagingBufferOffsetToGpu_ = rhs.stagingBufferOffsetToGpu_;
+    fromGpus_ = std::move(rhs.fromGpus_);
+    stagingBufferOffsetFromGpu_ = rhs.stagingBufferOffsetFromGpu_;
+
+    rhs.fence_ = nullptr;
+    rhs.commandBuffer_ = nullptr;
+    rhs.stagingBufferOffsetToGpu_ = 0;
+    rhs.fromGpus_.clear();
+    rhs.stagingBufferOffsetFromGpu_ = 0;
+
+    return *this;
+  }
+
   template <typename T>
   Execution& toGpu(const Buffer<T>& buffer)
   {
@@ -67,9 +103,6 @@ private:
   Execution& draw(GraphicsShader& graphicsShader, DescriptorSet& descriptorSet, Framebuffer& framebuffer, vk::Buffer vertexBuffer, vk::Buffer indexBuffer, uint32_t indexCount);
 
   Engine& engine_;
-  vk::Device device_;
-  vk::Queue queue_;
-  vk::CommandPool transientCommandPool_;
 
   vk::Fence fence_;
   vk::CommandBuffer commandBuffer_;

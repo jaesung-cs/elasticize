@@ -51,8 +51,8 @@ int main()
       .run();
 
     // Swapchain
-    constexpr auto width = 1600;
-    constexpr auto height = 900;
+    constexpr uint32_t width = 1600;
+    constexpr uint32_t height = 900;
     elastic::window::Window window(width, height, "Animation");
     elastic::gpu::Swapchain swapchain(engine, window);
     const auto& swapchainInfo = swapchain.info();
@@ -91,16 +91,24 @@ int main()
     elastic::gpu::Image transientDepthImage(engine, imageOptions);
 
     // Framebuffer
-    elastic::gpu::Framebuffer framebuffer(engine, width, height, graphicsShader,
-      {
-        transientColorImage,
-        transientDepthImage,
-        swapchain.image(0),
-      });
+    std::vector<elastic::gpu::Framebuffer> framebuffers;
+    for (const auto& swapchainImage : swapchain.images())
+    {
+      framebuffers.push_back(elastic::gpu::Framebuffer(engine, width, height, graphicsShader,
+        {
+          transientColorImage,
+          transientDepthImage,
+          swapchainImage,
+        }));
+    }
     
     // Rendering command
-    elastic::gpu::Execution drawCommand(engine);
-    drawCommand.draw(graphicsShader, descriptorSet, framebuffer, vertexBuffer, indexBuffer);
+    std::vector<elastic::gpu::Execution> drawCommands;
+    for (uint32_t i = 0; i < swapchain.imageCount(); i++)
+    {
+      drawCommands.emplace_back(engine);
+      drawCommands[i].draw(graphicsShader, descriptorSet, framebuffers[i], vertexBuffer, indexBuffer);
+    }
 
     window.setKeyboardCallback([&window](int key, int action)
       {
