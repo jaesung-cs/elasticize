@@ -44,13 +44,13 @@ public:
   explicit Engine(Options options);
   ~Engine();
 
-  auto instance() const noexcept { return instance_; }
-  auto physicalDevice() const noexcept { return physicalDevice_; }
-  auto queue() const noexcept { return queue_; }
-  auto queueIndex() const noexcept { return queueIndex_; }
-  auto device() const noexcept { return device_; }
-  auto transientCommandPool() const noexcept { return transientCommandPool_; }
-  auto descriptorPool() const noexcept { return descriptorPool_; }
+  vk::Instance instance() const noexcept;
+  vk::PhysicalDevice physicalDevice() const noexcept;
+  vk::Queue queue() const noexcept;
+  uint32_t queueIndex() const noexcept;
+  vk::Device device() const noexcept;
+  vk::CommandPool transientCommandPool() const noexcept;
+  vk::DescriptorPool descriptorPool() const noexcept;
 
 private:
   // By friend objects
@@ -60,60 +60,13 @@ private:
 
   vk::ShaderModule createShaderModule(const std::string& filepath);
 
-private:
-  void createInstance();
-  void destroyInstance();
-
-  void selectSuitablePhysicalDevice();
-  void createDevice();
-  void destroyDevice();
-
-  void createMemoryPool();
-  void destroyMemoryPool();
-
-  void createCommandPool();
-  void destroyCommandPool();
-
-  void createDescriptorPool();
-  void destroyDescriptorPool();
+  vk::Buffer stagingBuffer() const noexcept;
+  void fromStagingBuffer(void* target, vk::DeviceSize srcOffset, vk::DeviceSize size);
+  void toStagingBuffer(vk::DeviceSize targetOffset, const void* data, vk::DeviceSize size);
 
 private:
-  Options options_;
-  vk::Instance instance_;
-  vk::DebugUtilsMessengerEXT messenger_;
-
-  vk::PhysicalDevice physicalDevice_;
-  vk::Device device_;
-  vk::Queue queue_;
-  uint32_t queueIndex_ = 0;
-
-  // Memory pool
-  uint32_t deviceIndex_ = 0;
-  uint32_t hostIndex_ = 0;
-  vk::DeviceMemory deviceMemory_;
-  vk::DeviceSize deviceMemoryOffset_ = 0;
-  vk::DeviceMemory hostMemory_;
-  vk::Buffer stagingBuffer_;
-  uint8_t* stagingBufferMap_ = nullptr;
-
-  // Command pool
-  vk::CommandPool transientCommandPool_;
-  vk::Fence transferFence_;
-
-  // Descriptor pool
-  vk::DescriptorPool descriptorPool_;
-
-  // Compute pipelines
-  struct ComputePipeline
-  {
-    vk::DescriptorSetLayout descriptorSetLayout;
-    vk::PipelineLayout pipelineLayout;
-    vk::Pipeline pipeline;
-  };
-  std::vector<ComputePipeline> computePipelines_;
-
-  // Descriptor sets
-  std::vector<vk::DescriptorSet> descriptorSets_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

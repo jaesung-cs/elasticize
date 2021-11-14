@@ -19,21 +19,17 @@ class Swapchain
 {
 public:
   Swapchain() = delete;
-  Swapchain(Engine& engine, const window::Window& window);
+  Swapchain(Engine engine, const window::Window& window);
   ~Swapchain();
 
-  const auto& info() const noexcept { return swapchainInfo_; }
-  auto imageCount() const noexcept { return swapchainImages_.size(); }
-  const auto& images() const noexcept { return swapchainImages_; }
-  const Image& image(uint32_t index) const;
+  const vk::SwapchainCreateInfoKHR& info() const noexcept;
+  uint32_t imageCount() const noexcept;
+  const std::vector<Image>& images() const noexcept;
+  Image image(uint32_t index) const;
 
 private:
-  Engine& engine_;
-
-  vk::SurfaceKHR surface_;
-  vk::SwapchainCreateInfoKHR swapchainInfo_;
-  vk::SwapchainKHR swapchain_;
-  std::vector<Image> swapchainImages_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

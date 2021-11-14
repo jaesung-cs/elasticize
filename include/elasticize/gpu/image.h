@@ -24,45 +24,17 @@ public:
 
 public:
   Image() = delete;
-  Image(Engine& engine, const Options& options);
-  Image(Engine& engine, vk::Image image, vk::Format format);
+  Image(Engine engine, const Options& options);
+  Image(Engine engine, vk::Image image, vk::Format format);
   ~Image();
 
-  Image(const Image& rhs) = delete;
-  Image& operator = (const Image& rhs) = delete;
+  operator vk::Image() const noexcept;
 
-  Image(Image&& rhs) noexcept
-    : engine_(rhs.engine_)
-    , created_(rhs.created_)
-    , image_(rhs.image_)
-    , imageView_(rhs.imageView_)
-  {
-    rhs.image_ = nullptr;
-    rhs.imageView_ = nullptr;
-  }
-
-  Image& operator = (Image&& rhs) noexcept
-  {
-    created_ = rhs.created_;
-    image_ = rhs.image_;
-    imageView_ = rhs.imageView_;
-
-    rhs.image_ = nullptr;
-    rhs.imageView_ = nullptr;
-
-    return *this;
-  }
-
-  operator vk::Image() const noexcept { return image_; }
-
-  auto imageView() const noexcept { return imageView_; }
+  vk::ImageView imageView() const noexcept;
 
 private:
-  Engine& engine_;
-  bool created_;
-
-  vk::Image image_;
-  vk::ImageView imageView_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

@@ -46,20 +46,17 @@ public:
 public:
   GraphicsShader() = delete;
 
-  GraphicsShader(Engine& engine, const Options& options);
+  GraphicsShader(Engine engine, const Options& options);
 
   ~GraphicsShader();
 
-  auto renderPass() const noexcept { return renderPass_; }
-  auto pipelineLayout() const noexcept { return pipelineLayout_; }
-  auto pipeline() const noexcept { return pipeline_; }
+  vk::RenderPass renderPass() const noexcept;
+  vk::PipelineLayout pipelineLayout() const noexcept;
+  vk::Pipeline pipeline() const noexcept;
 
 private:
-  Engine& engine_;
-
-  vk::RenderPass renderPass_;
-  vk::PipelineLayout pipelineLayout_;
-  vk::Pipeline pipeline_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

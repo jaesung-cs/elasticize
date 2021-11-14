@@ -19,21 +19,19 @@ class ComputeShader
 public:
   ComputeShader() = delete;
 
-  ComputeShader(Engine& engine,
+  ComputeShader(Engine engine,
     const std::string& filepath,
-    DescriptorSetLayout& descriptorSetLayout,
+    DescriptorSetLayout descriptorSetLayout,
     const std::vector<PushConstantRange>& pushConstantRanges);
 
   ~ComputeShader();
 
-  auto pipelineLayout() const noexcept { return pipelineLayout_; }
-  auto pipeline() const noexcept { return pipeline_; }
+  vk::PipelineLayout pipelineLayout() const noexcept;
+  vk::Pipeline pipeline() const noexcept;
 
 private:
-  Engine& engine_;
-
-  vk::PipelineLayout pipelineLayout_;
-  vk::Pipeline pipeline_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }

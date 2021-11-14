@@ -92,7 +92,7 @@ int main()
 
     // Framebuffer
     std::vector<elastic::gpu::Framebuffer> framebuffers;
-    for (const auto& swapchainImage : swapchain.images())
+    for (auto swapchainImage : swapchain.images())
     {
       framebuffers.push_back(elastic::gpu::Framebuffer(engine, width, height, graphicsShader,
         {

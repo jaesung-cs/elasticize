@@ -13,15 +13,14 @@ class DescriptorSetLayout
 {
 public:
   DescriptorSetLayout() = delete;
-  DescriptorSetLayout(Engine& engine, uint32_t storageBufferCount);
+  DescriptorSetLayout(Engine engine, uint32_t storageBufferCount);
   ~DescriptorSetLayout();
 
-  operator vk::DescriptorSetLayout() const { return descriptorSetLayout_; }
+  operator vk::DescriptorSetLayout() const noexcept;
 
 private:
-  Engine& engine_;
-
-  vk::DescriptorSetLayout descriptorSetLayout_;
+  class Impl;
+  std::shared_ptr<Impl> impl_;
 };
 }
 }
