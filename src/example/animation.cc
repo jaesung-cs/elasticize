@@ -48,6 +48,7 @@ int main()
     elastic::gpu::Execution(engine)
       .toGpu(vertexBuffer)
       .toGpu(indexBuffer)
+      .end()
       .run();
 
     // Swapchain
@@ -107,7 +108,9 @@ int main()
     for (uint32_t i = 0; i < swapchain.imageCount(); i++)
     {
       drawCommands.emplace_back(engine);
-      drawCommands[i].draw(graphicsShader, descriptorSet, framebuffers[i], vertexBuffer, indexBuffer);
+      drawCommands[i]
+        .draw(graphicsShader, descriptorSet, framebuffers[i], vertexBuffer, indexBuffer)
+        .end();
     }
 
     window.setKeyboardCallback([&window](int key, int action)
@@ -116,15 +119,42 @@ int main()
           window.close();
       });
 
+    // TODO: image available semaphore
+    auto device = engine.device();
+    std::vector<vk::Semaphore> imageAvailableSemaphores;
+    std::vector<vk::Semaphore> renderFinishedSemaphores;
+    std::vector<vk::Fence> renderFinishedFences;
+    for (int i = 0; i < swapchain.imageCount(); i++)
+    {
+      imageAvailableSemaphores.push_back(device.createSemaphore({}));
+      renderFinishedSemaphores.push_back(device.createSemaphore({}));
+      renderFinishedFences.push_back(device.createFence({ vk::FenceCreateFlagBits::eSignaled }));
+    }
+
+    uint64_t frame = 0;
     while (!window.shouldClose())
     {
       windowManager.pollEvents();
 
-      elastic::gpu::Execution execution(engine);
-      execution.run();
+      uint32_t frameIndex = frame % swapchain.imageCount();
+
+      device.waitForFences(renderFinishedFences[frameIndex], true, UINT64_MAX);
+      device.resetFences(renderFinishedFences[frameIndex]);
+
+      auto imageIndex = swapchain.acquireNextImage(imageAvailableSemaphores[frameIndex]);
+      std::cout << imageIndex << std::endl;
+
+      drawCommands[imageIndex].present(imageAvailableSemaphores[frameIndex], renderFinishedSemaphores[imageIndex], renderFinishedFences[frameIndex], swapchain, imageIndex);
 
       using namespace std::chrono_literals;
       std::this_thread::sleep_for(0.01s);
+    }
+
+    for (int i = 0; i < swapchain.imageCount(); i++)
+    {
+      device.destroySemaphore(imageAvailableSemaphores[i]);
+      device.destroySemaphore(renderFinishedSemaphores[i]);
+      device.destroyFence(renderFinishedFences[i]);
     }
   }
   catch (const std::exception& e)

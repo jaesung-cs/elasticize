@@ -106,6 +106,8 @@ public:
     instance.destroySurfaceKHR(surface_);
   }
 
+  operator vk::SwapchainKHR() const noexcept { return swapchain_; }
+
   const auto& info() const noexcept { return swapchainInfo_; }
   auto imageCount() const noexcept { return static_cast<uint32_t>(swapchainImages_.size()); }
   const auto& images() const noexcept { return swapchainImages_; }
@@ -113,6 +115,13 @@ public:
   Image image(uint32_t index) const
   {
     return swapchainImages_[index];
+  }
+
+  uint32_t acquireNextImage(vk::Semaphore signalSemaphore)
+  {
+    auto device = engine_.device();
+
+    return device.acquireNextImageKHR(swapchain_, UINT64_MAX, signalSemaphore).value;
   }
 
 private:
@@ -130,6 +139,11 @@ Swapchain::Swapchain(Engine engine, const window::Window& window)
 }
 
 Swapchain::~Swapchain() = default;
+
+Swapchain::operator vk::SwapchainKHR() const noexcept
+{
+  return *impl_;
+}
 
 const vk::SwapchainCreateInfoKHR& Swapchain::info() const noexcept
 {
@@ -149,6 +163,11 @@ const std::vector<Image>& Swapchain::images() const noexcept
 Image Swapchain::image(uint32_t index) const
 {
   return impl_->image(index);
+}
+
+uint32_t Swapchain::acquireNextImage(vk::Semaphore signalSemaphore)
+{
+  return impl_->acquireNextImage(signalSemaphore);
 }
 }
 }

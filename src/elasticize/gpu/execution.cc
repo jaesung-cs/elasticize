@@ -7,6 +7,7 @@
 #include <elasticize/gpu/graphics_shader.h>
 #include <elasticize/gpu/descriptor_set.h>
 #include <elasticize/gpu/framebuffer.h>
+#include <elasticize/gpu/swapchain.h>
 
 namespace elastic
 {
@@ -31,7 +32,7 @@ public:
       .setCommandBufferCount(1);
     commandBuffer_ = device.allocateCommandBuffers(allocateInfo)[0];
 
-    commandBuffer_.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+    commandBuffer_.begin(vk::CommandBufferBeginInfo());
   }
 
   ~Impl()
@@ -156,12 +157,15 @@ public:
 
   }
 
+  void end()
+  {
+    commandBuffer_.end();
+  }
+
   void run()
   {
     auto device = engine_.device();
     auto queue = engine_.queue();
-
-    commandBuffer_.end();
 
     const auto submit = vk::SubmitInfo().setCommandBuffers(commandBuffer_);
     queue.submit(submit, fence_);
@@ -173,6 +177,35 @@ public:
     // From staging buffer to actual buffers
     for (auto fromGpuRange : fromGpus_)
       engine_.fromStagingBuffer(fromGpuRange.target, fromGpuRange.stagingBufferOffset, fromGpuRange.size);
+  }
+
+  void present(vk::Semaphore imageAvailableSemaphore, vk::Semaphore renderFinishedSemaphore, vk::Fence renderFinishedFence, Swapchain swapchain, uint32_t imageIndex)
+  {
+    auto queue = engine_.queue();
+
+    std::vector<vk::Semaphore> waitSemaphores = {
+      imageAvailableSemaphore,
+    };
+    std::vector<vk::PipelineStageFlags> waitMasks = {
+      vk::PipelineStageFlagBits::eColorAttachmentOutput
+    };
+
+    auto submitInfo = vk::SubmitInfo()
+      .setWaitSemaphores(waitSemaphores)
+      .setWaitDstStageMask(waitMasks)
+      .setCommandBuffers(commandBuffer_)
+      .setSignalSemaphores(renderFinishedSemaphore);
+    queue.submit(submitInfo, renderFinishedFence);
+
+    // Present
+    std::vector<vk::SwapchainKHR> swapchains = {
+      swapchain,
+    };
+    auto presentInfo = vk::PresentInfoKHR()
+      .setWaitSemaphores(renderFinishedSemaphore)
+      .setSwapchains(swapchains)
+      .setImageIndices(imageIndex);
+    queue.presentKHR(presentInfo);
   }
 
 private:
@@ -235,9 +268,20 @@ Execution& Execution::draw(GraphicsShader graphicsShader, DescriptorSet descript
   return *this;
 }
 
+Execution& Execution::end()
+{
+  impl_->end();
+  return *this;
+}
+
 void Execution::run()
 {
   impl_->run();
+}
+
+void Execution::present(vk::Semaphore imageAvailableSemaphore, vk::Semaphore renderFinishedSemaphore, vk::Fence renderFinishedFence, Swapchain swapchain, uint32_t imageIndex)
+{
+  impl_->present(imageAvailableSemaphore, renderFinishedSemaphore, renderFinishedFence, swapchain, imageIndex);
 }
 }
 }

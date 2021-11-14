@@ -22,10 +22,13 @@ public:
   Swapchain(Engine engine, const window::Window& window);
   ~Swapchain();
 
+  operator vk::SwapchainKHR() const noexcept;
   const vk::SwapchainCreateInfoKHR& info() const noexcept;
   uint32_t imageCount() const noexcept;
   const std::vector<Image>& images() const noexcept;
   Image image(uint32_t index) const;
+
+  uint32_t acquireNextImage(vk::Semaphore signalSemaphore);
 
 private:
   class Impl;

@@ -14,6 +14,7 @@ class ComputeShader;
 class GraphicsShader;
 class DescriptorSet;
 class Framebuffer;
+class Swapchain;
 
 class Execution
 {
@@ -57,7 +58,10 @@ public:
     return draw(graphicsShader, descriptorSet, framebuffer, vertexBuffer, indexBuffer, static_cast<uint32_t>(indexBuffer.size()));
   }
 
+  Execution& end();
+
   void run();
+  void present(vk::Semaphore imageAvailableSemaphore, vk::Semaphore renderFinishedSemaphore, vk::Fence renderFinishedFence, Swapchain swapchain, uint32_t imageIndex);
 
 private:
   Execution& toGpu(vk::Buffer buffer, const void* data, vk::DeviceSize size);

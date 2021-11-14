@@ -140,6 +140,7 @@ int main()
         .copy(outBuffer, arrayBuffer)
         .barrier();
     }
+    execution.end();
 
     std::cout << "GPU radix sort" << std::endl;
     elastic::utils::Timer gpuTimer;
